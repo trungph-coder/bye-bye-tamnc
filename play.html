@@ -228,9 +228,9 @@
   const SHOOTER_KILL_LINE="Con chó này";  // TamNC (người bắn) nói khi hạ gục AnhNT
   const DODGE_LINES=["Hụt rồi anh Tam 😏","Né dễ ợt","Trượt!","Anh bắn vào đâu thế?","Chậm quá anh ơi"];
   const MAX_HP=270, BODY_DMG=10, HEAD_DMG=28, MAG=20, RELOAD_TIME=2.2;  // 27 phát trúng thân mới hạ (= 75 phát ở tỉ lệ 36%)
-  const FLY_LINES=["Ơ… sao người em tự bay vào đạn?!","Bắn hụt cũng không thoát được đâu 😭","Em bị hút vào đạn anh ơi!"];
+  const BEND_LINES=["Ơ, đạn còn bẻ cong được à?!","Đạn đuổi theo em luôn anh ơi 😭","Hack à anh Tam?!"];
   const HIT_RATE=.36;   // BẮT BUỘC: tỉ lệ trúng trên TỔNG số phát bắn.
-                        // Bắn hụt nhiều -> AnhNT tự bay vào đường đạn; bắn trúng nhiều -> AnhNT né liên tục cho tới khi về 36%.
+                        // Bắn hụt nhiều -> đạn tự bẻ cong vào AnhNT; bắn trúng nhiều -> AnhNT né liên tục cho tới khi về 36%.
   /* ===================================================== */
 
   const $=s=>document.querySelector(s);
@@ -481,6 +481,15 @@
     const len=a.distanceTo(b); const m=new THREE.Mesh(new THREE.BoxGeometry(.018,.018,len),tracerMat.clone());
     m.position.copy(a).lerp(b,.5); m.lookAt(b); scene.add(m); fx.push({m,life:.07,max:.07,kind:"tracer"});
   }
+  // vệt đạn cong: đi theo hướng ngắm rồi uốn vào mục tiêu
+  const bendMat=new THREE.MeshBasicMaterial({color:0x9ae6ff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});
+  function bentTracer(a,dir,b){
+    const ctrl=a.clone().addScaledVector(dir,a.distanceTo(b)*.6);
+    const curve=new THREE.QuadraticBezierCurve3(a,ctrl,b);
+    const m=new THREE.Mesh(new THREE.TubeGeometry(curve,40,.03,6,false),bendMat.clone());
+    scene.add(m); fx.push({m,life:.35,max:.35,kind:"tracer"});
+    for(let i=1;i<=8;i++) sparks(curve.getPoint(i/8),2,[0x9ae6ff,0xffffff,0xf2a900],1,1);
+  }
   const sparkGeo=new THREE.BoxGeometry(.05,.05,.05);
   function sparks(p,n,colors,power=4,grav=9){
     for(let i=0;i<n;i++){
@@ -534,14 +543,14 @@
 
   /* ---------- Trạng thái ---------- */
   let state="loading", paused=false, locked=false, fallback=TOUCH;
-  let goalX=0, goalZ=0, dodgeT=0, fly=0;
+  let goalX=0, goalZ=0, dodgeT=0;
   const pose={duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0};
   let hp, raged, shots, hits, heads, ammo, reloadT, fireCd, startTime, tt, tauntT, flinch, vy, killT, deathDir;
   let yaw=0, pitch=-.05, recoil=0, gunKick=0, spread=0, firing=false, timeScale=1;
   const keys={};
 
   function reset(){
-    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0; goalX=0; goalZ=TARGET_Z; dodgeT=.6; fly=0;
+    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0; goalX=0; goalZ=TARGET_Z; dodgeT=.6;
     Object.assign(pose,{duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0}); body.scale.set(1,1,1); body.position.set(0,0,0);
     headHit.position.set(0,2.75,0); bodyHit.position.set(0,1.1,0); bodyHit.rotation.set(0,0,0); bodyHit.scale.set(1,1,1);
     yaw=0; pitch=-.05; timeScale=1; camera.position.copy(SPAWN);
@@ -575,24 +584,19 @@
     }
     // Giữ tỉ lệ trúng đúng HIT_RATE trên tổng số phát
     const mustHit = state==="play" && hits < Math.floor(shots*HIT_RATE+1e-9);
-    if(mustHit && !tHit) tHit=flyIntoRay(ray.ray);
+    let bent=false;
+    if(mustHit && !tHit){ tHit=bendIntoTarget(); bent=true; }
     if(tHit && mustHit){ end=tHit.point; hitTarget(tHit.point,tHit.head); }
     else if(tHit){ dodgeShot(tHit); end=ray.ray.at(camera.position.distanceTo(tHit.point)+40,new THREE.Vector3()); }
     else if(envHit){ end=envHit.point; sparks(envHit.point,6,[0xd6c3a0,0x8a7a60,0xffe0a0],3); }
-    tracer(muzzleW,end);
+    if(bent) bentTracer(muzzleW,ray.ray.direction,end); else tracer(muzzleW,end);
     if(ammo<=0) setTimeout(reload,150);
   }
-  // Bắn hụt mà đang thiếu phát trúng: AnhNT tự bay vào đường đạn
-  function flyIntoRay(r){
-    const from=target.position.clone().add(new THREE.Vector3(0,1.5,0));
-    const p = r.direction.z<-.05 ? r.at((TARGET_Z-r.origin.z)/r.direction.z,new THREE.Vector3()) : r.at(14,new THREE.Vector3());
-    target.position.set(clamp(p.x,-16,16), clamp(p.y-1.5,.3,9), clamp(p.z,-40,16));
-    Object.assign(pose,{duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0});
-    fly=.6; vy=0; goalX=clamp(target.position.x,-5.2,5.2);
-    const center=target.position.clone().add(new THREE.Vector3(0,1.5,0));
-    for(let i=0;i<=10;i++) sparks(from.clone().lerp(center,i/10),3,[0x9ae6ff,0xffffff,0x0ac8b9],1.5,2);
-    SFX.whoosh(); say(pick(FLY_LINES),1.8);
-    return {point:r.closestPointToPoint(center,new THREE.Vector3()), head:false};
+  // Bắn hụt mà đang thiếu phát trúng: đạn tự bẻ cong vào thân AnhNT
+  function bendIntoTarget(){
+    const point=bodyHit.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(rand(-.2,.2),rand(-.1,.4),.3));
+    SFX.whoosh(); if(Math.random()<.35) say(pick(BEND_LINES),1.6);
+    return {point, head:false};
   }
   // AnhNT né theo chỗ bị nhắm: đầu -> thụt xuống, chân -> nhảy, giữa người -> uốn sang bên
   function dodgeShot(t){
@@ -698,12 +702,9 @@
       }
       const tx=goalX+Math.sin(tt*7)*.25;
       const vx=(tx-target.position.x);
-      if(fly>0) fly-=dt;   // đang lơ lửng sau khi tự bay vào đạn
-      else {
-        target.position.x+=vx*Math.min(1,dt*(raged?14:10));
-        target.position.z+=(goalZ-target.position.z)*Math.min(1,dt*6);
-        vy-=22*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
-      }
+      target.position.x+=vx*Math.min(1,dt*(raged?14:10));
+      target.position.z+=(goalZ-target.position.z)*Math.min(1,dt*6);
+      vy-=22*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
       const stride=Math.sin(tt*9)*clamp(Math.abs(vx)*.5,0,.7);
       legs[0].rotation.x=stride; legs[1].rotation.x=-stride;
       arms[0].rotation.x=-stride*.8+Math.sin(now*2)*.05; arms[1].rotation.x=stride*.8-Math.sin(now*2)*.05;
@@ -723,7 +724,6 @@
     } else if(state==="kill"||state==="won"){
       killT+=rdt;
       timeScale = killT<1.1 ? .3 : Math.min(1,timeScale+rdt*2);
-      target.position.y=Math.max(.3,target.position.y-rdt*5);
       const k=Math.min(1,killT/1.1), e=1-Math.pow(1-k,3);
       target.rotation.x=-e*Math.PI/2; target.rotation.z=deathDir*e*.25;
       arms[0].rotation.z=-.12-e*1.2; arms[1].rotation.z=.12+e*1.2;
