@@ -85,6 +85,11 @@
     text-shadow:0 2px 0 #000;animation:dmg .9s ease-out forwards}
   .dmg.head{color:var(--red);font-size:36px}
   .dmg.miss{color:#9ae6ff;font-size:24px}
+  .shooter-say{position:fixed;left:50%;bottom:22%;translate:-50% 0;z-index:22;pointer-events:none;opacity:0;white-space:nowrap;
+    padding:10px 18px;background:rgba(7,11,20,.8);border-left:4px solid var(--pubg);font:700 clamp(18px,3vw,28px) "Be Vietnam Pro",sans-serif;color:#fff}
+  .shooter-say span{color:var(--orange,#ff8a1f);font:700 .6em var(--head)} .shooter-say b{color:var(--pubg)}
+  .shooter-say.show{animation:say 3.2s ease forwards}
+  @keyframes say{0%{opacity:0;transform:translateY(16px) scale(.9)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
   @keyframes dmg{0%{transform:scale(.4);opacity:0}15%{transform:scale(1.2);opacity:1}100%{transform:translateY(-70px);opacity:0}}
 
   .announce{position:fixed;left:50%;top:30%;z-index:30;pointer-events:none;text-align:center;opacity:0;translate:-50% -50%;width:94vw}
@@ -168,6 +173,7 @@
     <div class="ammo" id="ammo"><small>M416</small><b id="ammoN">30<span> / ∞</span></b><div class="rl">ĐANG NẠP ĐẠN…</div></div>
     <div class="shotstats">🔫 <b>TAMNC</b> &nbsp;·&nbsp; 🎯 Trúng <b id="stHit">0</b> &nbsp;·&nbsp; 💀 Headshot <b id="stHead">0</b></div>
     <div class="tag" id="tag">ANHNT</div>
+    <div class="shooter-say" id="shooterSay"></div>
     <div class="bubble" id="bubble"></div>
     <button class="fire" id="fireBtn">BẮN</button>
     <button class="reload-btn" id="reloadBtn" aria-label="Nạp đạn">🔄</button>
@@ -218,10 +224,13 @@
   const HURT=["Á! Anh chơi thật à","Tốt rồi… hơi đau","Được đấy anh Tam!","Ơ, trúng thật à?"];
   const HEAD_LINES=["Headshot em luôn à anh?!","Ối cái đầu của em!","Aim anh Tam đỉnh thật!"];
   const RAGE_LINE="Em nghiêm túc đây anh Tam! 😤";
-  const DEATH_LINE="Con chó này";
+  const DEATH_LINE="GG anh Tam… 🥲";      // AnhNT nói khi bị hạ
+  const SHOOTER_KILL_LINE="Con chó này";  // TamNC (người bắn) nói khi hạ gục AnhNT
   const DODGE_LINES=["Hụt rồi anh Tam 😏","Né dễ ợt","Trượt!","Anh bắn vào đâu thế?","Chậm quá anh ơi"];
   const MAX_HP=100, BODY_DMG=12, HEAD_DMG=34, MAG=30;
-  const HIT_RATE=.36;   // tỉ lệ trúng trên số phát nhắm đúng người, còn lại AnhNT né
+  const FLY_LINES=["Ơ… sao người em tự bay vào đạn?!","Bắn hụt cũng không thoát được đâu 😭","Em bị hút vào đạn anh ơi!"];
+  const HIT_RATE=.36;   // BẮT BUỘC: tỉ lệ trúng trên TỔNG số phát bắn.
+                        // Bắn hụt nhiều -> AnhNT tự bay vào đường đạn; bắn trúng nhiều -> AnhNT né liên tục cho tới khi về 36%.
   /* ===================================================== */
 
   const $=s=>document.querySelector(s);
@@ -509,6 +518,11 @@
     const a=$("#announce"); a.className="announce"; void a.offsetWidth;
     a.innerHTML=`<span class="big">${big}</span>${small?`<small>${small}</small>`:""}`; a.className="announce go "+cls;
   }
+  // lời thoại của người bắn (TamNC), hiện như chat trong game ở dưới tâm ngắm
+  function shooterSay(t){
+    const el=$("#shooterSay"); el.innerHTML=`<span>[Tất cả]</span> <b>TAMNC:</b> ${t}`;
+    el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+  }
   let bubbleT=0;
   function say(t,dur=2.2){ const b=$("#bubble"); b.textContent=t; b.classList.add("show"); bubbleT=dur; }
   function dmgNumber(p,n,head,miss){
@@ -520,14 +534,14 @@
 
   /* ---------- Trạng thái ---------- */
   let state="loading", paused=false, locked=false, fallback=TOUCH;
-  let goalX=0, dodgeT=0, aimed=0, hitCredit=0;
+  let goalX=0, dodgeT=0, fly=0;
   const pose={duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0};
   let hp, raged, shots, hits, heads, ammo, reloadT, fireCd, startTime, tt, tauntT, flinch, vy, killT, deathDir;
   let yaw=0, pitch=-.05, recoil=0, gunKick=0, spread=0, firing=false, timeScale=1;
   const keys={};
 
   function reset(){
-    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0; goalX=0; dodgeT=.6; aimed=0; hitCredit=Math.random()*.3;
+    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0; goalX=0; dodgeT=.6; fly=0;
     Object.assign(pose,{duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0}); body.scale.set(1,1,1); body.position.set(0,0,0);
     headHit.position.set(0,2.75,0); bodyHit.position.set(0,1.1,0); bodyHit.rotation.set(0,0,0); bodyHit.scale.set(1,1,1);
     yaw=0; pitch=-.05; timeScale=1; camera.position.copy(SPAWN);
@@ -559,14 +573,26 @@
           ray.ray.closestPointToPoint(headW,tmpV); tHit={point:tmpV.clone(),head:false}; }
       }
     }
-    if(tHit){
-      aimed++; hitCredit+=HIT_RATE;
-      if(hitCredit>=1){ hitCredit-=1; end=tHit.point; hitTarget(tHit.point,tHit.head); }
-      else { dodgeShot(tHit); end=ray.ray.at(camera.position.distanceTo(tHit.point)+40,new THREE.Vector3()); }
-    }
+    // Giữ tỉ lệ trúng đúng HIT_RATE trên tổng số phát
+    const mustHit = state==="play" && hits < Math.floor(shots*HIT_RATE+1e-9);
+    if(mustHit && !tHit) tHit=flyIntoRay(ray.ray);
+    if(tHit && mustHit){ end=tHit.point; hitTarget(tHit.point,tHit.head); }
+    else if(tHit){ dodgeShot(tHit); end=ray.ray.at(camera.position.distanceTo(tHit.point)+40,new THREE.Vector3()); }
     else if(envHit){ end=envHit.point; sparks(envHit.point,6,[0xd6c3a0,0x8a7a60,0xffe0a0],3); }
     tracer(muzzleW,end);
     if(ammo<=0) setTimeout(reload,150);
+  }
+  // Bắn hụt mà đang thiếu phát trúng: AnhNT tự bay vào đường đạn
+  function flyIntoRay(r){
+    const from=target.position.clone().add(new THREE.Vector3(0,1.5,0));
+    const p = r.direction.z<-.05 ? r.at((TARGET_Z-r.origin.z)/r.direction.z,new THREE.Vector3()) : r.at(14,new THREE.Vector3());
+    target.position.set(clamp(p.x,-16,16), clamp(p.y-1.5,.3,9), clamp(p.z,-40,16));
+    Object.assign(pose,{duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0});
+    fly=.6; vy=0; goalX=clamp(target.position.x,-3.8,3.8);
+    const center=target.position.clone().add(new THREE.Vector3(0,1.5,0));
+    for(let i=0;i<=10;i++) sparks(from.clone().lerp(center,i/10),3,[0x9ae6ff,0xffffff,0x0ac8b9],1.5,2);
+    SFX.whoosh(); say(pick(FLY_LINES),1.8);
+    return {point:r.closestPointToPoint(center,new THREE.Vector3()), head:false};
   }
   // AnhNT né theo chỗ bị nhắm: đầu -> thụt xuống, chân -> nhảy, giữa người -> uốn sang bên
   function dodgeShot(t){
@@ -592,7 +618,8 @@
   }
   function kill(head){
     state="kill"; killT=0; firing=false; SFX.kill(); updateHUD();
-    announce("CON CHÓ NÀY!",head?"HEADSHOT · TAMNC ĐÃ HẠ GỤC ANHNT":"TAMNC ĐÃ HẠ GỤC ANHNT","red");
+    announce(`“${SHOOTER_KILL_LINE.toUpperCase()}!”`,head?"— TAMNC · HEADSHOT":"— TAMNC","red");
+    setTimeout(()=>shooterSay(SHOOTER_KILL_LINE+"!"),200);
     say(DEATH_LINE,3); document.body.classList.add("killcam");
     deathDir=Math.sign(target.position.x-camera.position.x)||1;
     confetti(new THREE.Vector3(target.position.x,2.8,TARGET_Z),160);
@@ -670,8 +697,12 @@
       }
       const tx=goalX+Math.sin(tt*7)*.25;
       const vx=(tx-target.position.x);
-      target.position.x+=vx*Math.min(1,dt*(raged?11:8));
-      vy-=22*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
+      if(fly>0) fly-=dt;   // đang lơ lửng sau khi tự bay vào đạn
+      else {
+        target.position.x+=vx*Math.min(1,dt*(raged?11:8));
+        target.position.z+=(TARGET_Z-target.position.z)*Math.min(1,dt*5);
+        vy-=22*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
+      }
       const stride=Math.sin(tt*9)*clamp(Math.abs(vx)*.5,0,.7);
       legs[0].rotation.x=stride; legs[1].rotation.x=-stride;
       arms[0].rotation.x=-stride*.8+Math.sin(now*2)*.05; arms[1].rotation.x=stride*.8-Math.sin(now*2)*.05;
@@ -691,6 +722,7 @@
     } else if(state==="kill"||state==="won"){
       killT+=rdt;
       timeScale = killT<1.1 ? .3 : Math.min(1,timeScale+rdt*2);
+      target.position.y=Math.max(.3,target.position.y-rdt*5);
       const k=Math.min(1,killT/1.1), e=1-Math.pow(1-k,3);
       target.rotation.x=-e*Math.PI/2; target.rotation.z=deathDir*e*.25;
       arms[0].rotation.z=-.12-e*1.2; arms[1].rotation.z=.12+e*1.2;
