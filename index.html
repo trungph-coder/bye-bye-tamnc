@@ -332,6 +332,14 @@
     border-left:7px solid #fff; border-top:6px solid transparent; border-bottom:6px solid transparent; }
   .music-tip.hidden { display:none; }
 
+  /* ---- Chuyển chế độ Nắng / Game ---- */
+  .mode-switch { position:fixed; top:16px; left:16px; z-index:45; display:flex; padding:4px; border-radius:999px;
+    background:rgba(255,255,255,.75); box-shadow:0 6px 18px rgba(var(--shadow),.25); backdrop-filter:blur(6px); }
+  .mode-switch a { padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; color:var(--sun-deep);
+    text-decoration:none; transition:background .2s ease, color .2s ease; }
+  .mode-switch a:hover { background:rgba(255,165,58,.2); }
+  .mode-switch a.on { color:#fff; background:linear-gradient(135deg,var(--sun-4),var(--sun-deep)); }
+
   footer { position:fixed; bottom:12px; width:100%; text-align:center; font-size:12px; color:rgba(var(--shadow),.65); z-index:1; }
 
   .burst { position:fixed; font-size:20px; pointer-events:none; z-index:60; animation:burst 1s ease-out forwards; }
@@ -357,6 +365,7 @@
   <audio id="bgMusic" src="music.mp3" loop autoplay preload="auto"></audio>
   <button class="music-btn" id="musicBtn" aria-label="Bật/tắt nhạc"><span class="disc">🎵</span></button>
   <div class="music-tip" id="musicTip">Bật nhạc nền 🎶</div>
+  <nav class="mode-switch" aria-label="Chọn chế độ"><a class="on" href="index.html">🌻 Nắng</a><a href="game.html">🎮 Game</a></nav>
 
   <!-- Định nghĩa bông hoa SVG dùng lại -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
