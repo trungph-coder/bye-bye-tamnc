@@ -3,7 +3,9 @@
 Thiệp chia tay anh **Nguyễn Chí Tam**, dựa trên template [anhnt-24/bye-bye-namtlv](https://github.com/anhnt-24/bye-bye-namtlv). Có 2 chế độ, chuyển bằng nút góc trên bên trái:
 
 - **🌻 Nắng** (`index.html`) — phong bì, lá thư giấy kẻ, tông vàng cam.
-- **🎮 Game** (`game.html`) — LMHT × PUBG: tìm trận → CHIẾN THẮNG → thẻ MVP, tổng kết trận, highlight, Honor, kênh chat, nút "Tốt rồi", thành tựu, kill feed.
+- **🎮 Game** (`play.html` → `game.html`) — LMHT × PUBG:
+  - `play.html`: game bắn súng góc nhìn thứ nhất (3D, Three.js). Anh Tam đứng giữa đấu trường, thân 3D, **đầu là ảnh**; né qua lại, cà khịa, nổi giận khi còn nửa máu. Bắn hạ xong tự sang hậu trận.
+  - `game.html`: hậu trận — thẻ MVP, tổng kết trận (lấy số liệu trận vừa bắn), highlight, Honor, kênh chat, nút "Tốt rồi", thành tựu, kill feed.
 
 ## Thả ảnh vào `images/`
 
@@ -13,6 +15,7 @@ Thiệp chia tay anh **Nguyễn Chí Tam**, dựa trên template [anhnt-24/bye-b
 | 4 ảnh trong thư (Nắng) / ảnh chụp dưới kênh chat (Game) | `thu-1.jpg` … `thu-4.jpg` |
 | 2 sticker hai bên (PNG nền trong, màn ≥900px) — chỉ bản Nắng | `sticker-trai.png`, `sticker-phai.png` |
 | Ảnh đại diện thẻ MVP — chỉ bản Game | `avatar.jpg` |
+| Đầu nhân vật trong game bắn (PNG đã tách nền; không có thì cắt tròn `avatar.jpg`) | `dau.png` |
 
 Khung nào chưa có ảnh sẽ hiện 📷 kèm tên file cần thả. Dùng đuôi khác (`.png`, `.jpeg`) thì sửa `src` trong `index.html`.
 
@@ -20,6 +23,7 @@ Khung nào chưa có ảnh sẽ hiện 📷 kèm tên file cần thả. Dùng đ
 - Nội dung thư: tìm `✏️ Sửa nội dung thư` trong `index.html`.
 - Chú thích ảnh: các thẻ `<figcaption>`.
 - Chữ bản Game (chỉ số, Honor, tin nhắn, kill feed): khối `✏️ NỘI DUNG` đầu `<script>` trong `game.html`.
+- Câu thoại, máu, sát thương trong game bắn: khối `✏️ NỘI DUNG` trong `play.html`.
 - Nhạc nền: thay `music.mp3`; bản Game ưu tiên `music-game.mp3` nếu có.
 
 ## Hiệu ứng

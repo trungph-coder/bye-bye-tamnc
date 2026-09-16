@@ -256,6 +256,7 @@
   .replay{margin-top:28px;background:none;color:var(--gold-hi);border:1px solid var(--gold);font:700 14px var(--head);
     letter-spacing:2px;padding:12px 26px;cursor:pointer;transition:background .2s,color .2s}
   .replay:hover{background:var(--gold);color:#1a1206}
+  a.replay{display:inline-block;text-decoration:none;margin-left:10px}
   footer{position:relative;z-index:2;text-align:center;color:var(--muted);font-size:12px;padding:0 0 28px}
 
   /* ---- Kill feed PUBG ---- */
@@ -313,7 +314,7 @@
 </head>
 <body class="locked">
   <audio id="bgMusic" src="music-game.mp3" loop preload="auto"></audio>
-  <nav class="mode-switch" aria-label="Chọn chế độ"><a href="index.html">🌻 Nắng</a><a class="on" href="game.html">🎮 Game</a></nav>
+  <nav class="mode-switch" aria-label="Chọn chế độ"><a href="index.html">🌻 Nắng</a><a class="on" href="play.html">🎮 Game</a></nav>
   <button class="music-btn" id="musicBtn" aria-label="Bật/tắt nhạc">🔇</button>
   <canvas id="fx" aria-hidden="true"></canvas>
   <canvas id="fxTop" aria-hidden="true"></canvas>
@@ -416,6 +417,7 @@
       <div class="transfer">🔁 CHUYỂN NHƯỢNG THÀNH CÔNG</div>
       <p>Tuyển thủ <b style="color:var(--gold-hi)">TAMNC</b> rời đội để chinh phục server mới. Cảm ơn đội trưởng vì đã dẫn cả team qua bao nhiêu trận. Hẹn gặp lại ở trận tiếp theo!</p>
       <button class="replay" id="replayBtn">↻ XEM LẠI TRẬN</button>
+      <a class="replay" href="play.html">🔫 BẮN LẠI ANH TAM</a>
     </section>
   </main>
 
@@ -466,6 +468,15 @@
     ["🛡️","Áp lực của team"], ["💥","Task tồn đọng"], ["🪓","Yêu cầu đổi phút chót"], ["🎮","Tâm lý tụt mood"],
   ];
   /* ===================================================================== */
+
+  // Đến từ game bắn (play.html): bỏ intro, hiện số liệu trận vừa chơi
+  const Q=new URLSearchParams(location.search), FROM_PLAY=Q.get("from")==="play";
+  if(FROM_PLAY && Q.has("hits")){
+    const shots=+Q.get("shots")||0, hits=+Q.get("hits")||0, heads=+Q.get("heads")||0;
+    SUMMARY.splice(0,SUMMARY.length,
+      ["#1","Hạng / 100 đội"], [hits,"Phát trúng TAMNC"], [heads,"Headshot"],
+      [(shots?Math.round(hits/shots*100):0)+"%","Độ chính xác"]);
+  }
 
   const $=s=>document.querySelector(s);
   const reduceMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -699,7 +710,10 @@
   $("#acceptBtn").addEventListener("click",accept);
   $("#skipBtn").addEventListener("click",()=>{ playMusic(); unlock("enter"); endIntro(); });
   $("#replayBtn").addEventListener("click",startIntro);
-  startIntro();
+  if(FROM_PLAY){
+    unlock("enter"); endIntro();
+    addEventListener("pointerdown",e=>{ if(!e.target.closest(".music-btn") && bgMusic.paused) playMusic(); },{once:true});
+  } else startIntro();
 </script>
 </body>
 </html>

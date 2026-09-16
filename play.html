@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>TAMNC: Bắn Hạ Đội Trưởng 🔫</title>
+
+<!--
+  ============== GAME BẮN GÓC NHÌN THỨ NHẤT ==============
+  Nhân vật anh Tam = thân dựng 3D + ĐẦU LÀ ẢNH:
+    - images/dau.png    : ảnh đầu đã tách nền (PNG trong suốt) — đẹp nhất
+    - images/avatar.jpg : nếu chưa có dau.png thì cắt tròn ảnh này làm đầu
+  Không có ảnh nào thì game tự vẽ một khuôn mặt thay thế.
+  Nhạc: music-game.mp3, không có thì music.mp3.
+  Bắn hạ xong tự chuyển sang game.html (hậu trận).
+  Câu thoại của anh Tam: khối "✏️ NỘI DUNG" đầu <script>.
+  =========================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --line:rgba(200,170,110,.32); --gold:#c8aa6e; --gold-hi:#f0e6d2; --gold-lo:#785a28;
+    --pubg:#f2a900; --hex:#0ac8b9; --red:#e84057; --text:#ece5d6; --muted:#98a2b3;
+    --head:"Chakra Petch",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#05080f;color:var(--text);font-family:"Be Vietnam Pro",system-ui,sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #c{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none}
+
+  .mode-switch{position:fixed;top:14px;left:14px;z-index:60;display:flex;padding:4px;border-radius:999px;
+    background:rgba(7,11,20,.8);border:1px solid var(--line);backdrop-filter:blur(8px)}
+  .mode-switch a{padding:6px 12px;border-radius:999px;font:700 13px var(--head);color:var(--muted);text-decoration:none}
+  .mode-switch a:hover{color:var(--gold-hi)}
+  .mode-switch a.on{color:#1a1206;background:linear-gradient(135deg,var(--gold-hi),var(--gold))}
+  .music-btn{position:fixed;top:14px;right:14px;z-index:60;width:44px;height:44px;border-radius:50%;cursor:pointer;
+    font-size:19px;color:var(--gold-hi);background:rgba(7,11,20,.8);border:1px solid var(--gold)}
+
+  /* ---------- HUD ---------- */
+  .hud{display:none} body.playing .hud{display:block}
+  .boss{position:fixed;top:16px;left:50%;translate:-50% 0;z-index:20;width:min(460px,56vw);pointer-events:none;text-align:center}
+  .boss .nm{font:700 15px var(--head);letter-spacing:3px;color:var(--gold-hi);text-shadow:0 2px 0 #000}
+  .boss .bar{position:relative;height:16px;margin-top:5px;background:rgba(0,0,0,.65);border:1px solid var(--gold);overflow:hidden}
+  .boss .bar i{position:absolute;inset:0;right:auto;width:100%;background:linear-gradient(90deg,#9b1c31,var(--red),#ff8a8a);transition:width .25s ease}
+  .boss .bar b{position:absolute;inset:0;right:auto;width:100%;background:rgba(255,255,255,.7);transition:width .9s ease .25s;z-index:-1}
+  .boss .bar{isolation:isolate}
+  .boss .hpn{position:absolute;right:6px;top:-1px;font:700 12px var(--head);color:#fff;text-shadow:0 1px 0 #000;z-index:2}
+
+  .crosshair{position:fixed;left:50%;top:50%;z-index:20;pointer-events:none;--gap:9px}
+  .crosshair i{position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.6);transition:transform .08s}
+  .crosshair i:nth-child(1){width:2px;height:10px;left:-1px;top:calc(-10px - var(--gap))}
+  .crosshair i:nth-child(2){width:2px;height:10px;left:-1px;top:var(--gap)}
+  .crosshair i:nth-child(3){width:10px;height:2px;top:-1px;left:calc(-10px - var(--gap))}
+  .crosshair i:nth-child(4){width:10px;height:2px;top:-1px;left:var(--gap)}
+  .crosshair::after{content:"";position:absolute;width:3px;height:3px;left:-1.5px;top:-1.5px;background:var(--pubg);border-radius:50%}
+  .hitmarker{position:fixed;left:50%;top:50%;z-index:21;pointer-events:none;opacity:0}
+  .hitmarker i{position:absolute;width:3px;height:12px;background:#fff;left:-1.5px;top:-6px}
+  .hitmarker i:nth-child(1){transform:rotate(45deg) translateY(-12px)} .hitmarker i:nth-child(2){transform:rotate(-45deg) translateY(-12px)}
+  .hitmarker i:nth-child(3){transform:rotate(135deg) translateY(-12px)} .hitmarker i:nth-child(4){transform:rotate(-135deg) translateY(-12px)}
+  .hitmarker.go{animation:hm .28s ease-out}
+  .hitmarker.head i{background:var(--red);box-shadow:0 0 8px var(--red)}
+  @keyframes hm{0%{opacity:1;transform:scale(1.4)}100%{opacity:0;transform:scale(1)}}
+
+  .ammo{position:fixed;right:18px;bottom:18px;z-index:20;text-align:right;pointer-events:none}
+  .ammo small{display:block;font:700 12px var(--head);letter-spacing:3px;color:var(--muted)}
+  .ammo b{font:700 44px/1 var(--head);color:var(--gold-hi);text-shadow:0 3px 0 #000}
+  .ammo b span{font-size:20px;color:var(--muted)}
+  .ammo .rl{font:700 13px var(--head);color:var(--pubg);letter-spacing:2px;opacity:0}
+  .ammo.reloading .rl{opacity:1;animation:blink .5s steps(2) infinite}
+  @keyframes blink{50%{opacity:.2}}
+  .shotstats{position:fixed;left:18px;bottom:18px;z-index:20;pointer-events:none;font:700 14px var(--head);color:var(--gold-hi);
+    background:rgba(7,11,20,.7);border:1px solid var(--line);padding:8px 12px;line-height:1.6}
+  .shotstats b{color:var(--pubg)}
+
+  .tag{position:fixed;z-index:15;pointer-events:none;translate:-50% -100%;font:700 14px var(--head);letter-spacing:2px;color:var(--gold-hi);
+    text-shadow:0 2px 0 #000,0 0 10px rgba(242,169,0,.6);white-space:nowrap}
+  .bubble{position:fixed;z-index:16;pointer-events:none;translate:0 -100%;max-width:230px;padding:9px 13px;border-radius:14px 14px 14px 2px;
+    background:#fff;color:#1a1206;font:700 15px "Be Vietnam Pro",sans-serif;box-shadow:0 8px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .2s,transform .2s;transform:scale(.8)}
+  .bubble.show{opacity:1;transform:none}
+  .dmg{position:fixed;z-index:17;pointer-events:none;translate:-50% -50%;font:italic 700 26px var(--head);color:#fff;
+    text-shadow:0 2px 0 #000;animation:dmg .9s ease-out forwards}
+  .dmg.head{color:var(--red);font-size:36px}
+  @keyframes dmg{0%{transform:scale(.4);opacity:0}15%{transform:scale(1.2);opacity:1}100%{transform:translateY(-70px);opacity:0}}
+
+  .announce{position:fixed;left:50%;top:30%;z-index:30;pointer-events:none;text-align:center;opacity:0;translate:-50% -50%;width:94vw}
+  .announce .big{display:block;font:italic 700 clamp(36px,7.5vw,84px)/1.25 var(--head);letter-spacing:.04em;padding:.1em 0 .18em;
+    background:linear-gradient(180deg,#fff8e6,var(--gold-hi) 35%,var(--gold) 65%,var(--gold-lo));
+    -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 0 rgba(0,0,0,.6)) drop-shadow(0 0 24px rgba(242,169,0,.5))}
+  .announce small{display:block;margin-top:4px;font:700 clamp(13px,2vw,18px) var(--head);letter-spacing:3px;color:var(--pubg);text-shadow:0 2px 0 #000}
+  .announce.red .big{background:linear-gradient(180deg,#fff,#ff9aa8 40%,var(--red));-webkit-background-clip:text;background-clip:text}
+  .announce.go{animation:ann 1.8s ease forwards}
+  @keyframes ann{0%{opacity:0;transform:scale(2.3)}10%{opacity:1;transform:scale(1)}78%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-20px)}}
+  .vignette{position:fixed;inset:0;z-index:14;pointer-events:none;box-shadow:inset 0 0 160px rgba(0,0,0,.65)}
+  .slowmo{position:fixed;inset:0;z-index:14;pointer-events:none;opacity:0;background:radial-gradient(circle,transparent 40%,rgba(242,169,0,.25));transition:opacity .3s}
+  body.killcam .slowmo{opacity:1}
+
+  .fire{display:none}
+  @media (pointer:coarse){
+    .fire{display:flex;position:fixed;right:22px;bottom:26px;z-index:25;width:92px;height:92px;border-radius:50%;border:3px solid var(--pubg);
+      background:radial-gradient(circle,rgba(242,169,0,.45),rgba(7,11,20,.7));align-items:center;justify-content:center;
+      font:700 16px var(--head);letter-spacing:2px;color:#fff;touch-action:none}
+    .fire.down{transform:scale(.92);background:radial-gradient(circle,rgba(242,169,0,.8),rgba(7,11,20,.7))}
+    .reload-btn{position:fixed;right:124px;bottom:30px;z-index:25;width:54px;height:54px;border-radius:50%;border:2px solid var(--gold);
+      background:rgba(7,11,20,.7);color:var(--gold-hi);font-size:22px;touch-action:none}
+    .ammo{right:24px;bottom:132px} .ammo b{font-size:32px}
+    .boss{top:66px;width:70vw}
+    .shotstats{font-size:12px;padding:6px 9px}
+  }
+  @media (pointer:fine){ .reload-btn{display:none} }
+
+  /* ---------- Màn hình ---------- */
+  .screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;text-align:center;padding:70px 20px 24px;overflow:auto;
+    background:radial-gradient(circle at 50% 40%,rgba(22,32,52,.9),rgba(3,5,10,.97) 70%)}
+  .screen.hide{display:none}
+  .eyebrow{font:700 13px var(--head);letter-spacing:5px;color:var(--hex)}
+  .title{font:700 clamp(56px,12vw,130px)/1.15 var(--head);letter-spacing:.04em;padding-top:.08em;
+    background:linear-gradient(180deg,#fff8e6,var(--gold-hi) 30%,var(--gold) 62%,var(--gold-lo));
+    -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 30px rgba(242,169,0,.4))}
+  .subtitle{font:italic 700 clamp(17px,3.2vw,28px) var(--head);letter-spacing:3px;color:var(--pubg);margin-top:-6px}
+  .face{width:130px;height:130px;border-radius:50%;border:4px solid var(--gold);box-shadow:0 0 30px rgba(242,169,0,.5);
+    background:#1b2436 center/cover;animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(-8px) rotate(5deg)}}
+  .lead{max-width:600px;line-height:1.7}
+  .howto{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;max-width:720px;color:var(--muted);font-size:14px}
+  kbd{font:700 12px var(--head);color:var(--gold-hi);border:1px solid var(--gold);border-bottom-width:3px;padding:2px 7px;border-radius:4px;background:rgba(0,0,0,.4)}
+  .btn{font:700 22px var(--head);letter-spacing:4px;color:#1a1206;border:none;cursor:pointer;padding:16px 58px;text-decoration:none;display:inline-block;
+    clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%);
+    background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-lo));animation:glow 1.3s ease-in-out infinite}
+  .btn:disabled{opacity:.5;animation:none;cursor:wait}
+  @keyframes glow{50%{filter:brightness(1.25) drop-shadow(0 0 16px rgba(240,230,210,.8))}}
+  .ghost{background:none;border:1px solid var(--line);color:var(--muted);font:600 14px var(--head);letter-spacing:1px;padding:9px 18px;cursor:pointer;text-decoration:none}
+  .ghost:hover{color:var(--gold-hi);border-color:var(--gold)}
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(96px,1fr));gap:10px;margin:4px 0}
+  .stats div{border:1px solid var(--line);background:rgba(0,0,0,.35);padding:12px 10px}
+  .stats b{display:block;font:700 30px var(--head);color:var(--pubg)}
+  .stats span{font-size:12px;color:var(--muted)}
+  .chicken{font:italic 700 clamp(16px,3vw,24px) var(--head);letter-spacing:2px;color:#111;padding:8px 22px;background:var(--pubg)}
+  .row-btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center}
+  .countdown{color:var(--muted);font-size:14px}
+  .countdown b{color:var(--pubg)}
+  .touch-only{display:none!important}
+  @media (pointer:coarse){ .touch-only{display:flex!important} .desk-only{display:none!important} }
+  @media (max-width:560px){ .stats{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+  <audio id="bgMusic" src="music-game.mp3" loop preload="auto"></audio>
+  <nav class="mode-switch" aria-label="Chọn chế độ"><a href="index.html">🌻 Nắng</a><a class="on" href="play.html">🎮 Game</a></nav>
+  <button class="music-btn" id="musicBtn" aria-label="Bật/tắt nhạc">🔇</button>
+
+  <canvas id="c"></canvas>
+  <div class="vignette"></div>
+  <div class="slowmo"></div>
+
+  <div class="hud">
+    <div class="boss">
+      <div class="nm">👑 ĐỘI TRƯỞNG TAMNC</div>
+      <div class="bar"><b id="bossLag"></b><i id="bossHp"></i><span class="hpn" id="bossNum">100</span></div>
+    </div>
+    <div class="crosshair" id="cross"><i></i><i></i><i></i><i></i></div>
+    <div class="hitmarker" id="hitmarker"><i></i><i></i><i></i><i></i></div>
+    <div class="ammo" id="ammo"><small>M416</small><b id="ammoN">30<span> / ∞</span></b><div class="rl">ĐANG NẠP ĐẠN…</div></div>
+    <div class="shotstats">🎯 Trúng <b id="stHit">0</b> &nbsp;·&nbsp; 💀 Headshot <b id="stHead">0</b></div>
+    <div class="tag" id="tag">TAMNC</div>
+    <div class="bubble" id="bubble"></div>
+    <button class="fire" id="fireBtn">BẮN</button>
+    <button class="reload-btn" id="reloadBtn" aria-label="Nạp đạn">🔄</button>
+  </div>
+  <div class="announce" id="announce"></div>
+
+  <div class="screen" id="start">
+    <div class="eyebrow">LMHT × PUBG · GÓC NHÌN THỨ NHẤT</div>
+    <div class="face" id="startFace"></div>
+    <h1 class="title">TAMNC</h1>
+    <div class="subtitle">BẮN HẠ ĐỘI TRƯỞNG</div>
+    <p class="lead">Anh Tam đang đứng giữa đấu trường, né qua né lại và cà khịa cả team. Bắn hạ anh ấy để mở khóa <b style="color:var(--gold-hi)">trang hậu trận</b>. Nhắm vào đầu để <b style="color:var(--red)">HEADSHOT</b>!</p>
+    <div class="howto desk-only">
+      <span><kbd>Chuột</kbd> ngắm</span><span><kbd>Click</kbd> giữ để bắn</span><span><kbd>R</kbd> nạp đạn</span><span><kbd>W A S D</kbd> di chuyển</span><span><kbd>Esc</kbd> tạm dừng</span>
+    </div>
+    <div class="howto touch-only"><span>👆 Kéo màn hình để ngắm</span><span>🔫 Giữ nút BẮN</span><span>🔄 Nạp đạn</span></div>
+    <button class="btn" id="playBtn" disabled>ĐANG TẢI…</button>
+    <a class="ghost" href="game.html">Bỏ qua, xem hậu trận ›</a>
+  </div>
+
+  <div class="screen hide" id="pause">
+    <h1 class="title" style="font-size:clamp(44px,9vw,90px)">TẠM DỪNG</h1>
+    <button class="btn" id="resumeBtn">TIẾP TỤC</button>
+  </div>
+
+  <div class="screen hide" id="win">
+    <div class="eyebrow">ĐÃ HẠ GỤC ĐỘI TRƯỞNG TAMNC</div>
+    <h1 class="title" style="font-size:clamp(50px,11vw,120px)">CHIẾN THẮNG</h1>
+    <div class="chicken">WINNER WINNER CHICKEN DINNER 🍗</div>
+    <div class="stats">
+      <div><b id="sShots">0</b><span>Phát bắn</span></div>
+      <div><b id="sHits">0</b><span>Trúng</span></div>
+      <div><b id="sHeads">0</b><span>Headshot</span></div>
+      <div><b id="sTime">0s</b><span>Thời gian</span></div>
+    </div>
+    <div class="row-btns">
+      <a class="btn" id="afterBtn" href="game.html?from=play">XEM HẬU TRẬN 🏆</a>
+      <button class="ghost" id="againBtn">↻ Bắn lại</button>
+    </div>
+    <div class="countdown" id="countdown">Tự chuyển sang hậu trận sau <b id="cdN">6</b> giây</div>
+  </div>
+
+<script type="module">
+  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js";
+
+  /* ==================== ✏️ NỘI DUNG ==================== */
+  const TAUNTS=["Tốt rồi! 😎","Bắn trúng anh đi em","Rank gì mà run tay thế?","Deadline anh còn né được","GG chưa em?","Tốt rồi, bắn tiếp đi!","Aim kiểu này sao leo rank 😏"];
+  const HURT=["Á!","Tốt rồi… hơi đau","Được đấy!","Ơ, trúng thật à?"];
+  const HEAD_LINES=["Headshot à?! Tốt rồi…","Ối cái đầu của anh!","Aim ngon đấy em!"];
+  const RAGE_LINE="Nghiêm túc đây! 😤";
+  const DEATH_LINE="GG… Tốt rồi 🥲";
+  const MAX_HP=100, BODY_DMG=12, HEAD_DMG=34, MAG=30;
+  /* ===================================================== */
+
+  const $=s=>document.querySelector(s);
+  const TOUCH=matchMedia("(pointer:coarse)").matches;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+  /* ---------- Nhạc + âm thanh tổng hợp ---------- */
+  const bgMusic=$("#bgMusic"), musicBtn=$("#musicBtn");
+  bgMusic.volume=.35; let wantMusic=false;
+  bgMusic.addEventListener("error",()=>{ if(!bgMusic.src.endsWith("/music.mp3")){ bgMusic.src="music.mp3"; if(wantMusic) playMusic(); } });
+  function playMusic(){ wantMusic=true; bgMusic.play().then(()=>musicBtn.textContent="🎵").catch(()=>musicBtn.textContent="🔇"); }
+  musicBtn.addEventListener("click",e=>{ e.stopPropagation(); if(bgMusic.paused) playMusic(); else { wantMusic=false; bgMusic.pause(); musicBtn.textContent="🔇"; } });
+
+  let AC=null, NOISE=null;
+  function ac(){
+    if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)();
+      NOISE=AC.createBuffer(1,AC.sampleRate*.3,AC.sampleRate); const d=NOISE.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; }catch(e){} }
+    if(AC && AC.state==="suspended") AC.resume();
+    return AC;
+  }
+  function env(g,t,v,dur){ g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0008,t+dur); }
+  const SFX={
+    shot(){ const a=ac(); if(!a) return; const t=a.currentTime;
+      const n=a.createBufferSource(); n.buffer=NOISE; const f=a.createBiquadFilter(); f.type="lowpass";
+      f.frequency.setValueAtTime(4200,t); f.frequency.exponentialRampToValueAtTime(260,t+.16);
+      const g=a.createGain(); env(g,t,.42,.17); n.connect(f).connect(g).connect(a.destination); n.start(t); n.stop(t+.2);
+      const o=a.createOscillator(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(45,t+.12);
+      const g2=a.createGain(); env(g2,t,.55,.13); o.connect(g2).connect(a.destination); o.start(t); o.stop(t+.15); },
+    tone(freqs,dur,type,vol){ const a=ac(); if(!a) return; freqs.forEach((fq,i)=>{ const t=a.currentTime+i*dur*.8;
+      const o=a.createOscillator(); o.type=type; o.frequency.value=fq; const g=a.createGain(); env(g,t,vol,dur);
+      o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+.02); }); },
+    hit(){ this.tone([1900],.05,"square",.06); },
+    head(){ this.tone([1320,1980],.1,"triangle",.28); },
+    reload(){ this.tone([420,620],.05,"square",.05); },
+    kill(){ const a=ac(); if(!a) return; const t=a.currentTime;
+      const o=a.createOscillator(); o.frequency.setValueAtTime(90,t); o.frequency.exponentialRampToValueAtTime(28,t+.7);
+      const g=a.createGain(); env(g,t,.8,.75); o.connect(g).connect(a.destination); o.start(t); o.stop(t+.8);
+      setTimeout(()=>this.tone([660,880,1320],.16,"triangle",.22),250); },
+  };
+
+  /* ---------- Renderer / scene ---------- */
+  const renderer=new THREE.WebGLRenderer({canvas:$("#c"),antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.Fog(0xd98c5f,35,150);
+  const camera=new THREE.PerspectiveCamera(TOUCH?75:70,innerWidth/innerHeight,.03,500);
+  camera.rotation.order="YXZ";
+  const SPAWN=new THREE.Vector3(0,1.65,7);
+  camera.position.copy(SPAWN);
+  scene.add(camera);
+  addEventListener("resize",()=>{ renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); });
+
+  function canvasTex(w,h,draw,repeat){
+    const c=document.createElement("canvas"); c.width=w; c.height=h; draw(c.getContext("2d"),w,h);
+    const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8;
+    if(repeat){ t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(repeat,repeat); }
+    return t;
+  }
+
+  // trời hoàng hôn Erangel
+  const sky=new THREE.Mesh(new THREE.SphereGeometry(400,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+    vertexShader:`varying vec3 vP; void main(){ vP=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`varying vec3 vP; void main(){ float h=vP.y;
+      vec3 top=vec3(.08,.12,.28), mid=vec3(.52,.32,.46), hor=vec3(1.0,.6,.32), bot=vec3(.2,.14,.12);
+      vec3 c = h>0.0 ? mix(hor, mix(mid,top,smoothstep(.12,.55,h)), smoothstep(0.0,.2,h)) : mix(hor,bot,smoothstep(0.0,.08,-h));
+      vec3 sd=normalize(vec3(-.45,.1,-1.0)); float s=max(dot(vP,sd),0.0);
+      c += vec3(1.0,.8,.5)*pow(s,400.0)*3.0 + vec3(1.0,.45,.2)*pow(s,10.0)*.45;
+      gl_FragColor=vec4(c,1.0); }`}));
+  scene.add(sky);
+
+  scene.add(new THREE.HemisphereLight(0xffd9b0,0x2b3a28,.9));
+  const sun=new THREE.DirectionalLight(0xffc48a,2.4);
+  sun.position.set(12,22,20); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:1,far:80});
+  scene.add(sun);
+
+  const envMeshes=[];
+  const std=(color,o={})=>new THREE.MeshStandardMaterial({color,roughness:.85,...o});
+
+  // mặt đất
+  const grassTex=canvasTex(512,512,(g,w,h)=>{ g.fillStyle="#476b2e"; g.fillRect(0,0,w,h);
+    for(let i=0;i<6000;i++){ g.fillStyle=`hsl(${75+Math.random()*35},${30+Math.random()*25}%,${20+Math.random()*20}%)`; g.fillRect(Math.random()*w,Math.random()*h,2,2+Math.random()*5); } },80);
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(500,500),std(0xffffff,{map:grassTex,roughness:1}));
+  ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground); envMeshes.push(ground);
+  const dirtTex=canvasTex(256,256,(g,w,h)=>{ g.fillStyle="#7a6242"; g.fillRect(0,0,w,h);
+    for(let i=0;i<2500;i++){ g.fillStyle=`rgba(${80+Math.random()*60|0},${60+Math.random()*40|0},${35+Math.random()*25|0},.6)`; g.fillRect(Math.random()*w,Math.random()*h,3,3); } });
+  dirtTex.wrapS=dirtTex.wrapT=THREE.RepeatWrapping; dirtTex.repeat.set(2,10);
+  const path=new THREE.Mesh(new THREE.PlaneGeometry(6,44),std(0xffffff,{map:dirtTex,roughness:1}));
+  path.rotation.x=-Math.PI/2; path.position.set(0,.01,-6); path.receiveShadow=true; scene.add(path);
+
+  // bệ đấu trường
+  const TARGET_Z=-13;
+  const stoneTex=canvasTex(256,256,(g,w,h)=>{ g.fillStyle="#6b6f7a"; g.fillRect(0,0,w,h);
+    for(let i=0;i<40;i++){ g.strokeStyle="rgba(0,0,0,.25)"; g.lineWidth=2; g.strokeRect(Math.random()*w,Math.random()*h,40+Math.random()*60,20+Math.random()*30); } });
+  const plat=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.6,.3,6),std(0xffffff,{map:stoneTex}));
+  plat.position.set(0,.15,TARGET_Z); plat.rotation.y=Math.PI/6; plat.receiveShadow=plat.castShadow=true; scene.add(plat); envMeshes.push(plat);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(3.2,.07,8,64),new THREE.MeshBasicMaterial({color:0xf2a900}));
+  ring.rotation.x=Math.PI/2; ring.position.set(0,.33,TARGET_Z); scene.add(ring);
+  const spot=new THREE.SpotLight(0xffe0a0,60,20,.5,.5); spot.position.set(0,9,TARGET_Z+3); spot.target.position.set(0,0,TARGET_Z);
+  scene.add(spot,spot.target);
+
+  // thùng gỗ + thùng thính PUBG
+  const woodTex=canvasTex(128,128,(g,w,h)=>{ g.fillStyle="#8a5a2b"; g.fillRect(0,0,w,h);
+    g.strokeStyle="#5a3a1a"; g.lineWidth=6; g.strokeRect(3,3,w-6,h-6); g.beginPath(); g.moveTo(0,0); g.lineTo(w,h); g.moveTo(w,0); g.lineTo(0,h); g.stroke();
+    for(let i=0;i<5;i++){ g.fillStyle="rgba(0,0,0,.12)"; g.fillRect(0,i*26,w,2); } });
+  const dropTex=canvasTex(128,128,(g,w,h)=>{ g.fillStyle="#b3262e"; g.fillRect(0,0,w,h); g.fillStyle="#f5f5f5"; g.fillRect(0,50,w,28);
+    g.fillStyle="#1f4fa8"; g.fillRect(0,0,w,10); g.fillRect(0,h-10,w,10); g.fillStyle="#111"; g.font="700 20px sans-serif"; g.textAlign="center"; g.fillText("AIRDROP",w/2,71); });
+  function crate(x,z,s,rot,tex,y=0){
+    const m=new THREE.Mesh(new THREE.BoxGeometry(s,s,s),std(0xffffff,{map:tex}));
+    m.position.set(x,y+s/2,z); m.rotation.y=rot; m.castShadow=m.receiveShadow=true; scene.add(m); envMeshes.push(m); return m;
+  }
+  crate(-4.5,-3,1.3,.3,woodTex); crate(-4.5,-3,1,.9,woodTex,1.3); crate(5,-6,1.4,-.2,dropTex);
+  crate(-7,-10,1.5,.6,woodTex); crate(7.5,-12,1.3,.1,woodTex); crate(7.5,-12,1,.5,dropTex,1.3);
+  crate(-3.5,4,1.1,.2,dropTex); crate(4,3,1.2,-.4,woodTex);
+
+  // trụ LMHT
+  const crystals=[];
+  function turret(x,z,color){
+    const g=new THREE.Group(); g.position.set(x,0,z);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.8,1,8),std(0x5b5f6b)); base.position.y=.5;
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.6,1,5,8),std(0x4a4e59)); col.position.y=3.5;
+    const cap=new THREE.Mesh(new THREE.TorusGeometry(.9,.18,8,16),std(0xc8aa6e,{metalness:.8,roughness:.3})); cap.position.y=6.1; cap.rotation.x=Math.PI/2;
+    const cr=new THREE.Mesh(new THREE.OctahedronGeometry(.75),new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:2.2}));
+    cr.position.y=7.2; crystals.push(cr);
+    [base,col,cap].forEach(m=>{ m.castShadow=m.receiveShadow=true; envMeshes.push(m); });
+    g.add(base,col,cap,cr); scene.add(g);
+    const l=new THREE.PointLight(color,25,14); l.position.y=7.2; g.add(l);
+  }
+  turret(-10,-20,0xe84057); turret(10,-20,0xe84057); turret(-9,6,0x3b82f6);
+
+  // cây, đá, núi
+  const rng=(()=>{ let s=7; return ()=>(s=(s*16807)%2147483647)/2147483647; })();
+  const trunkGeo=new THREE.CylinderGeometry(.25,.35,2,6), leafGeo=new THREE.ConeGeometry(1.8,4.5,7);
+  const TREES=90, trunks=new THREE.InstancedMesh(trunkGeo,std(0x5a3d22),TREES), leaves=new THREE.InstancedMesh(leafGeo,std(0x2f5a2a),TREES);
+  const M=new THREE.Matrix4(), Q=new THREE.Quaternion(), V=new THREE.Vector3(), SC=new THREE.Vector3();
+  for(let i=0;i<TREES;i++){
+    let x,z; do{ x=(rng()-.5)*140; z=(rng()-.5)*140-10; }while(Math.abs(x)<13 && z>-26 && z<14);
+    const s=.8+rng()*.9; SC.set(s,s,s); Q.setFromAxisAngle(V.set(0,1,0),rng()*6);
+    M.compose(V.set(x,1*s,z),Q,SC); trunks.setMatrixAt(i,M);
+    M.compose(V.set(x,4*s,z),Q,SC); leaves.setMatrixAt(i,M);
+  }
+  trunks.castShadow=leaves.castShadow=true; scene.add(trunks,leaves);
+  const rocks=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1),std(0x7b7b80),30);
+  for(let i=0;i<30;i++){ let x,z; do{ x=(rng()-.5)*60; z=(rng()-.5)*50-10; }while(Math.abs(x)<6);
+    const s=.3+rng()*.7; SC.set(s*1.3,s*.7,s); Q.setFromAxisAngle(V.set(0,1,0),rng()*6); M.compose(V.set(x,s*.3,z),Q,SC); rocks.setMatrixAt(i,M); }
+  rocks.castShadow=true; scene.add(rocks);
+  for(let i=0;i<14;i++){ const a=-Math.PI*.1-rng()*Math.PI*.8-Math.PI*.05, r=170+rng()*60;
+    const m=new THREE.Mesh(new THREE.ConeGeometry(30+rng()*30,30+rng()*40,6),std(0x3b3346,{flatShading:true}));
+    m.position.set(Math.cos(a)*r,10,Math.sin(a)*r); scene.add(m); }
+
+  // thính đang rơi (trang trí)
+  const drop=new THREE.Group();
+  const chute=new THREE.Mesh(new THREE.SphereGeometry(1.8,12,8,0,Math.PI*2,0,Math.PI/2),std(0xe84057,{side:THREE.DoubleSide}));
+  chute.position.y=3; const dbox=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),std(0xffffff,{map:dropTex}));
+  drop.add(chute,dbox); scene.add(drop);
+  let dropT=0;
+
+  /* ---------- Anh Tam: thân 3D + đầu là ảnh ---------- */
+  const loadImg=src=>new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=()=>r(null); i.src=src; });
+  function headCanvas(img,cutout){
+    const c=document.createElement("canvas"); c.width=c.height=512; const g=c.getContext("2d");
+    if(img && cutout){ const s=Math.min(512/img.width,512/img.height); g.drawImage(img,(512-img.width*s)/2,(512-img.height*s)/2,img.width*s,img.height*s); return c; }
+    g.save(); g.beginPath(); g.arc(256,256,236,0,Math.PI*2); g.clip();
+    if(img){ const s=Math.min(img.width,img.height); g.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,512,512); }
+    else {
+      const gr=g.createRadialGradient(200,190,20,256,256,260); gr.addColorStop(0,"#ffe0bd"); gr.addColorStop(1,"#d9a066");
+      g.fillStyle=gr; g.fillRect(0,0,512,512);
+      g.fillStyle="#2a1a0a"; g.beginPath(); g.ellipse(256,70,230,110,0,0,Math.PI*2); g.fill();
+      g.fillStyle="#1a1a1a"; g.beginPath(); g.arc(180,250,22,0,7); g.arc(332,250,22,0,7); g.fill();
+      g.strokeStyle="#1a1a1a"; g.lineWidth=14; g.lineCap="round"; g.beginPath(); g.arc(256,300,90,.2*Math.PI,.8*Math.PI); g.stroke();
+      g.fillStyle="rgba(0,0,0,.55)"; g.font='700 44px "Chakra Petch",sans-serif'; g.textAlign="center"; g.fillText("images/dau.png",256,460);
+    }
+    g.restore();
+    g.lineWidth=18; g.strokeStyle="#c8aa6e"; g.beginPath(); g.arc(256,256,238,0,Math.PI*2); g.stroke();
+    return c;
+  }
+
+  const tam=new THREE.Group(); tam.position.set(0,.3,TARGET_Z); scene.add(tam);
+  const body=new THREE.Group(); tam.add(body);
+  const skin=std(0xe0ac7e), navy=std(0x16213e), dark=std(0x111827), goldM=std(0xc8aa6e,{metalness:.6,roughness:.4});
+  const shadowAll=o=>o.traverse(m=>{ if(m.isMesh){ m.castShadow=true; m.receiveShadow=true; } });
+  let headMesh=null, headHit=null, bodyHit=null;
+  const legs=[], arms=[];
+
+  function buildTam(headImg,cutout){
+    const jersey=canvasTex(256,256,(g,w,h)=>{
+      g.fillStyle="#16213e"; g.fillRect(0,0,w,h); g.fillStyle="#c8aa6e"; g.fillRect(0,0,w,22); g.fillRect(0,h-16,w,16);
+      g.fillStyle="#f2a900"; g.textAlign="center"; g.font='700 120px "Chakra Petch",sans-serif'; g.fillText("99",w/2,160);
+      g.fillStyle="#f0e6d2"; g.font='700 40px "Chakra Petch",sans-serif'; g.fillText("TAMNC",w/2,222); });
+    const torso=new THREE.Mesh(new THREE.BoxGeometry(1,.95,.5),[navy,navy,navy,navy,std(0xffffff,{map:jersey}),navy]);
+    torso.position.y=1.55;
+    const hips=new THREE.Mesh(new THREE.BoxGeometry(.95,.3,.48),dark); hips.position.y=.98;
+    for(const sx of [-1,1]){
+      const leg=new THREE.Group(); leg.position.set(sx*.25,.9,0);
+      const thigh=new THREE.Mesh(new THREE.BoxGeometry(.32,.8,.34),dark); thigh.position.y=-.4;
+      const shoe=new THREE.Mesh(new THREE.BoxGeometry(.34,.14,.5),std(0xf2a900)); shoe.position.set(0,-.83,.07);
+      leg.add(thigh,shoe); body.add(leg); legs.push(leg);
+      const arm=new THREE.Group(); arm.position.set(sx*.65,1.95,0);
+      const sleeve=new THREE.Mesh(new THREE.BoxGeometry(.28,.4,.3),navy); sleeve.position.y=-.18;
+      const fore=new THREE.Mesh(new THREE.BoxGeometry(.24,.5,.26),skin); fore.position.y=-.62;
+      const band=new THREE.Mesh(new THREE.BoxGeometry(.26,.08,.28),goldM); band.position.y=-.4;
+      arm.add(sleeve,fore,band); arm.rotation.z=sx*.12; body.add(arm); arms.push(arm);
+    }
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.14,.16,.25,10),skin); neck.position.y=2.12;
+    body.add(torso,hips,neck);
+    shadowAll(body);
+
+    const tex=new THREE.CanvasTexture(headCanvas(headImg,cutout)); tex.colorSpace=THREE.SRGBColorSpace;
+    headMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:tex,transparent:true,alphaTest:.05,side:THREE.DoubleSide}));
+    headMesh.position.y=2.75; headMesh.castShadow=true; tam.add(headMesh);
+    headHit=new THREE.Mesh(new THREE.SphereGeometry(.5,12,8),new THREE.MeshBasicMaterial({visible:false}));
+    headHit.position.y=2.75; tam.add(headHit);
+    bodyHit=new THREE.Mesh(new THREE.BoxGeometry(1.5,2.2,.7),new THREE.MeshBasicMaterial({visible:false}));
+    bodyHit.position.y=1.1; tam.add(bodyHit);
+  }
+
+  /* ---------- Súng góc nhìn thứ nhất ---------- */
+  const gun=new THREE.Group(); camera.add(gun);
+  const GUN_BASE=new THREE.Vector3(.3,-.3,-.62);
+  gun.position.copy(GUN_BASE);
+  const gm=std(0x4a5263,{metalness:.35,roughness:.5}), gg=std(0xd9b878,{metalness:.5,roughness:.35});
+  const gunLight=new THREE.PointLight(0xffe6c8,4,2.5); gunLight.position.set(.1,.35,-.2); camera.add(gunLight);
+  [[new THREE.BoxGeometry(.11,.14,.5),gm,[0,0,0]],
+   [new THREE.BoxGeometry(.1,.1,.26),gg,[0,-.005,-.36]],
+   [new THREE.CylinderGeometry(.022,.022,.34,10),gm,[0,.02,-.62],[Math.PI/2,0,0]],
+   [new THREE.BoxGeometry(.065,.24,.1),gm,[0,-.18,-.07],[.25,0,0]],
+   [new THREE.BoxGeometry(.06,.17,.08),gm,[0,-.14,.14],[-.35,0,0]],
+   [new THREE.BoxGeometry(.08,.12,.26),gg,[0,-.01,.36]],
+   [new THREE.BoxGeometry(.05,.06,.14),gm,[0,.1,-.02]],
+  ].forEach(([geo,mat,p,r])=>{ const m=new THREE.Mesh(geo,mat); m.position.set(...p); if(r) m.rotation.set(...r); gun.add(m); });
+  const muzzle=new THREE.Object3D(); muzzle.position.set(0,.02,-.8); gun.add(muzzle);
+  const flashTex=canvasTex(64,64,(g,w,h)=>{ const gr=g.createRadialGradient(32,32,0,32,32,32); gr.addColorStop(0,"#fff"); gr.addColorStop(.3,"#ffd35a"); gr.addColorStop(1,"rgba(255,140,0,0)"); g.fillStyle=gr; g.fillRect(0,0,w,h); });
+  const flashSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:flashTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));
+  flashSpr.visible=false; muzzle.add(flashSpr);
+  const flashLight=new THREE.PointLight(0xffc060,0,6); muzzle.add(flashLight);
+
+  /* ---------- Hạt / vệt đạn ---------- */
+  const fx=[];
+  const tracerMat=new THREE.MeshBasicMaterial({color:0xffd35a,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});
+  function tracer(a,b){
+    const len=a.distanceTo(b); const m=new THREE.Mesh(new THREE.BoxGeometry(.018,.018,len),tracerMat.clone());
+    m.position.copy(a).lerp(b,.5); m.lookAt(b); scene.add(m); fx.push({m,life:.07,max:.07,kind:"tracer"});
+  }
+  const sparkGeo=new THREE.BoxGeometry(.05,.05,.05);
+  function sparks(p,n,colors,power=4,grav=9){
+    for(let i=0;i<n;i++){
+      const m=new THREE.Mesh(sparkGeo,new THREE.MeshBasicMaterial({color:pick(colors),transparent:true}));
+      m.position.copy(p); scene.add(m);
+      fx.push({m,life:rand(.3,.7),max:.7,kind:"spark",grav,v:new THREE.Vector3(rand(-1,1),rand(-.2,1.2),rand(-1,1)).normalize().multiplyScalar(rand(.3,1)*power)});
+    }
+  }
+  const confGeo=new THREE.PlaneGeometry(.12,.07);
+  function confetti(p,n){
+    for(let i=0;i<n;i++){
+      const m=new THREE.Mesh(confGeo,new THREE.MeshBasicMaterial({color:pick([0xf2a900,0xc8aa6e,0xf0e6d2,0x0ac8b9,0xe84057,0xff8a1f]),side:THREE.DoubleSide,transparent:true}));
+      m.position.copy(p); scene.add(m);
+      fx.push({m,life:rand(2,3.2),max:3.2,kind:"conf",grav:3,spin:new THREE.Vector3(rand(-8,8),rand(-8,8),rand(-8,8)),
+        v:new THREE.Vector3(rand(-1,1),rand(.6,1.6),rand(-1,1)).normalize().multiplyScalar(rand(3,9))});
+    }
+  }
+  function updateFx(dt){
+    for(let i=fx.length-1;i>=0;i--){
+      const f=fx[i]; f.life-=dt;
+      if(f.life<=0){ scene.remove(f.m); f.m.geometry!==sparkGeo&&f.m.geometry!==confGeo&&f.m.geometry.dispose(); f.m.material.dispose(); fx.splice(i,1); continue; }
+      if(f.kind==="tracer"){ f.m.material.opacity=f.life/f.max; continue; }
+      f.v.y-=f.grav*dt; if(f.kind==="conf") f.v.multiplyScalar(1-1.2*dt);
+      f.m.position.addScaledVector(f.v,dt);
+      if(f.m.position.y<.02){ f.m.position.y=.02; f.v.set(0,0,0); }
+      if(f.spin){ f.m.rotation.x+=f.spin.x*dt; f.m.rotation.y+=f.spin.y*dt; }
+      f.m.material.opacity=Math.min(1,f.life*2);
+    }
+  }
+
+  /* ---------- DOM helpers ---------- */
+  const W2S=new THREE.Vector3();
+  function toScreen(v){ W2S.copy(v).project(camera); return {x:(W2S.x+1)/2*innerWidth, y:(1-W2S.y)/2*innerHeight, behind:W2S.z>1}; }
+  function announce(big,small="",cls=""){
+    const a=$("#announce"); a.className="announce"; void a.offsetWidth;
+    a.innerHTML=`<span class="big">${big}</span>${small?`<small>${small}</small>`:""}`; a.className="announce go "+cls;
+  }
+  let bubbleT=0;
+  function say(t,dur=2.2){ const b=$("#bubble"); b.textContent=t; b.classList.add("show"); bubbleT=dur; }
+  function dmgNumber(p,n,head){
+    const s=toScreen(p); if(s.behind) return;
+    const el=document.createElement("div"); el.className="dmg"+(head?" head":""); el.textContent=head?`${n} 💥`:n;
+    el.style.left=s.x+rand(-20,20)+"px"; el.style.top=s.y+"px"; document.body.appendChild(el); setTimeout(()=>el.remove(),900);
+  }
+  function hitmarker(head){ const h=$("#hitmarker"); h.className="hitmarker"; void h.offsetWidth; h.className="hitmarker go"+(head?" head":""); }
+
+  /* ---------- Trạng thái ---------- */
+  let state="loading", paused=false, locked=false, fallback=TOUCH;
+  let hp, raged, shots, hits, heads, ammo, reloadT, fireCd, startTime, tt, tauntT, flinch, vy, killT, deathDir;
+  let yaw=0, pitch=-.05, recoil=0, gunKick=0, spread=0, firing=false, timeScale=1;
+  const keys={};
+
+  function reset(){
+    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0;
+    yaw=0; pitch=-.05; timeScale=1; camera.position.copy(SPAWN);
+    tam.position.set(0,.3,TARGET_Z); tam.rotation.set(0,0,0); body.rotation.set(0,0,0);
+    headMesh.position.set(0,2.75,0); headMesh.rotation.set(0,0,0); headMesh.scale.setScalar(1);
+    document.body.classList.remove("killcam");
+    updateHUD();
+  }
+
+  /* ---------- Bắn ---------- */
+  const ray=new THREE.Raycaster(), NDC=new THREE.Vector2(), tmpV=new THREE.Vector3(), headW=new THREE.Vector3();
+  function reload(){ if(reloadT>0||ammo===MAG||state!=="play") return; reloadT=1.25; SFX.reload(); $("#ammo").classList.add("reloading"); }
+  function fire(){
+    if(ammo<=0){ reload(); return; }
+    ammo--; shots++; fireCd=.1; SFX.shot(); updateHUD();
+    gunKick=1; recoil+=.011; yaw+=rand(-.004,.004); spread=Math.min(spread+6,22);
+    flashSpr.visible=true; flashSpr.scale.setScalar(rand(.25,.4)); flashSpr.material.rotation=rand(0,6); flashLight.intensity=6;
+    const sp=(TOUCH?.006:.01)*(spread/22);
+    NDC.set(rand(-sp,sp),rand(-sp,sp)); ray.setFromCamera(NDC,camera);
+    const muzzleW=muzzle.getWorldPosition(new THREE.Vector3());
+    let end=ray.ray.at(120,new THREE.Vector3()), tHit=null;
+    const envHit=ray.intersectObjects(envMeshes,false)[0];
+    if(state==="play"){
+      const th=ray.intersectObjects([headHit,bodyHit],false)[0];
+      if(th && (!envHit || th.distance<envHit.distance)) tHit={point:th.point,head:th.object===headHit};
+      else if(TOUCH){ // ngắm hỗ trợ trên điện thoại
+        headHit.getWorldPosition(headW);
+        if(ray.ray.distanceToPoint(headW)<1.1 && (!envHit||envHit.distance>camera.position.distanceTo(headW))){
+          ray.ray.closestPointToPoint(headW,tmpV); tHit={point:tmpV.clone(),head:false}; }
+      }
+    }
+    if(tHit){ end=tHit.point; hitTam(tHit.point,tHit.head); }
+    else if(envHit){ end=envHit.point; sparks(envHit.point,6,[0xd6c3a0,0x8a7a60,0xffe0a0],3); }
+    tracer(muzzleW,end);
+    if(ammo<=0) setTimeout(reload,150);
+  }
+  function hitTam(p,head){
+    hits++; if(head) heads++;
+    const dmg=head?HEAD_DMG:BODY_DMG; hp=Math.max(0,hp-dmg);
+    dmgNumber(p,dmg,head); hitmarker(head); head?SFX.head():SFX.hit();
+    flinch=1; sparks(p,head?22:12,[0xf2a900,0xfff1b8,0xffffff],head?5:3.5);
+    if(hp<=0){ kill(head); return; }
+    if(head){ announce("HEADSHOT!","","red"); say(pick(HEAD_LINES)); }
+    else if(Math.random()<.3) say(pick(HURT),1.4);
+    if(!raged && hp<=50){ raged=true; say(RAGE_LINE); announce("ĐỘI TRƯỞNG NỔI GIẬN","ANH TAM NÉ NHANH HƠN RỒI","red"); }
+    updateHUD();
+  }
+  function kill(head){
+    state="kill"; killT=0; firing=false; SFX.kill(); updateHUD();
+    announce(head?"HEADSHOT!":"HẠ GỤC!","ĐÃ HẠ GỤC ĐỘI TRƯỞNG TAMNC",head?"red":"");
+    say(DEATH_LINE,3); document.body.classList.add("killcam");
+    deathDir=Math.sign(tam.position.x-camera.position.x)||1;
+    confetti(new THREE.Vector3(tam.position.x,2.8,TARGET_Z),160);
+    setTimeout(()=>{ announce("CHIẾN THẮNG","WINNER WINNER CHICKEN DINNER 🍗"); confetti(new THREE.Vector3(tam.position.x,3,TARGET_Z),120); },1500);
+    setTimeout(showWin,3300);
+  }
+  let cdTimer=null;
+  function showWin(){
+    state="won"; document.body.classList.remove("playing","killcam");
+    if(document.pointerLockElement) document.exitPointerLock();
+    const secs=Math.round((performance.now()-startTime)/1000);
+    $("#sShots").textContent=shots; $("#sHits").textContent=hits; $("#sHeads").textContent=heads; $("#sTime").textContent=secs+"s";
+    const url=`game.html?from=play&shots=${shots}&hits=${hits}&heads=${heads}&t=${secs}`;
+    $("#afterBtn").href=url; $("#win").classList.remove("hide");
+    let n=6; $("#cdN").textContent=n; $("#countdown").style.visibility="visible";
+    clearInterval(cdTimer); cdTimer=setInterval(()=>{ n--; $("#cdN").textContent=n; if(n<=0){ clearInterval(cdTimer); location.href=url; } },1000);
+  }
+
+  /* ---------- HUD ---------- */
+  function updateHUD(){
+    const pct=hp/MAX_HP*100;
+    $("#bossHp").style.width=pct+"%"; $("#bossLag").style.width=pct+"%"; $("#bossNum").textContent=hp;
+    $("#ammoN").innerHTML=`${ammo}<span> / ∞</span>`;
+    $("#stHit").textContent=hits; $("#stHead").textContent=heads;
+  }
+
+  /* ---------- Vòng lặp ---------- */
+  const clock=new THREE.Clock();
+  const FWD=new THREE.Vector3(), RIGHT=new THREE.Vector3();
+  function tick(){
+    requestAnimationFrame(tick);
+    const rdt=Math.min(clock.getDelta(),.05);
+    if(paused){ renderer.render(scene,camera); return; }
+    const dt=rdt*timeScale, now=performance.now()/1000;
+
+    // camera + di chuyển
+    recoil*=Math.pow(.0005,rdt); pitch=clamp(pitch,-1.2,1.2);
+    camera.rotation.y=yaw; camera.rotation.x=pitch+recoil;
+    if(state==="play" && !TOUCH){
+      FWD.set(-Math.sin(yaw),0,-Math.cos(yaw)); RIGHT.set(Math.cos(yaw),0,-Math.sin(yaw));
+      let mx=0,mz=0; if(keys.KeyW) mz++; if(keys.KeyS) mz--; if(keys.KeyD) mx++; if(keys.KeyA) mx--;
+      const l=Math.hypot(mx,mz)||1;
+      camera.position.addScaledVector(FWD,mz/l*5*rdt).addScaledVector(RIGHT,mx/l*5*rdt);
+      camera.position.x=clamp(camera.position.x,-7,7); camera.position.z=clamp(camera.position.z,-4,11);
+      const moving=mx||mz; camera.position.y=1.65+(moving?Math.sin(now*11)*.035:0);
+    }
+    sky.position.copy(camera.position);
+
+    // bắn
+    fireCd-=rdt;
+    if(reloadT>0){ reloadT-=rdt; if(reloadT<=0){ ammo=MAG; $("#ammo").classList.remove("reloading"); updateHUD(); } }
+    if(state==="play" && firing && fireCd<=0 && reloadT<=0) fire();
+    if(fireCd<.06){ flashSpr.visible=false; }
+    flashLight.intensity*=Math.pow(.0001,rdt);
+    spread=Math.max(0,spread-40*rdt);
+    $("#cross").style.setProperty("--gap",(9+spread)+"px");
+
+    // súng: giật + lắc + nạp đạn
+    gunKick*=Math.pow(.0008,rdt);
+    const reloadDip=reloadT>0?Math.sin((1-reloadT/1.25)*Math.PI):0;
+    gun.position.set(GUN_BASE.x+Math.sin(now*1.6)*.004, GUN_BASE.y+Math.cos(now*3.2)*.004-reloadDip*.18, GUN_BASE.z+gunKick*.07);
+    gun.rotation.set(gunKick*.12+reloadDip*.6, 0, reloadDip*.4);
+
+    // anh Tam
+    if(state==="play"||state==="demo"){
+      tt+=dt*(raged?1.9:1);
+      const tx=Math.sin(tt*.9)*2.6+(raged?Math.sin(tt*2.7)*.9:0);
+      const vx=(tx-tam.position.x);
+      tam.position.x+=vx*Math.min(1,dt*6);
+      if(raged && tam.position.y<=.3 && Math.random()<dt*.5) vy=5.5;
+      vy-=16*dt; tam.position.y=Math.max(.3,tam.position.y+vy*dt); if(tam.position.y<=.3) vy=0;
+      const stride=Math.sin(tt*9)*clamp(Math.abs(vx)*.5,0,.7);
+      legs[0].rotation.x=stride; legs[1].rotation.x=-stride;
+      arms[0].rotation.x=-stride*.8+Math.sin(now*2)*.05; arms[1].rotation.x=stride*.8-Math.sin(now*2)*.05;
+      if(state==="play"){ tauntT-=dt; if(tauntT<=0){ say(pick(TAUNTS)); tauntT=rand(4,6.5); } }
+      flinch=Math.max(0,flinch-dt*3);
+      body.rotation.z=Math.sin(now*50)*.06*flinch; body.rotation.x=-.15*flinch;
+      headMesh.scale.setScalar(1+.25*flinch+Math.sin(now*3)*.02);
+      headMesh.position.y=2.75+Math.sin(now*4)*.03;
+      tam.rotation.y=Math.atan2(camera.position.x-tam.position.x,camera.position.z-tam.position.z)*.6;
+      headMesh.lookAt(camera.position);
+    } else if(state==="kill"||state==="won"){
+      killT+=rdt;
+      timeScale = killT<1.1 ? .3 : Math.min(1,timeScale+rdt*2);
+      const k=Math.min(1,killT/1.1), e=1-Math.pow(1-k,3);
+      tam.rotation.x=-e*Math.PI/2; tam.rotation.z=deathDir*e*.25;
+      arms[0].rotation.z=-.12-e*1.2; arms[1].rotation.z=.12+e*1.2;
+      headMesh.rotation.z+=rdt*2*(1-k);
+    }
+    crystals.forEach((c,i)=>{ c.rotation.y+=dt*1.5; c.position.y=7.2+Math.sin(now*2+i)*.15; });
+    ring.material.color.setHSL(.11,1,.45+.1*Math.sin(now*4)); ring.rotation.z+=dt*.5;
+    dropT+=dt; const dp=(dropT%22)/22; drop.position.set(-24,40-dp*40,-40); drop.rotation.y=now*.3; chute.visible=dp<.97;
+
+    updateFx(dt);
+
+    // nhãn tên + bong bóng thoại
+    headMesh.getWorldPosition(headW); headW.y+=.85;
+    const s=toScreen(headW), tag=$("#tag"), bub=$("#bubble");
+    const show=!s.behind && (state==="play"||state==="kill");
+    tag.style.display=show?"block":"none"; tag.style.left=s.x+"px"; tag.style.top=s.y+"px";
+    const bw=bub.offsetWidth||200, right=s.x+40+bw<innerWidth-10;
+    bub.style.left=(right?s.x+40:Math.max(10,s.x-40-bw))+"px"; bub.style.top=s.y+10+"px";
+    bub.style.borderRadius=right?"14px 14px 14px 2px":"14px 14px 2px 14px";
+    if(bubbleT>0){ bubbleT-=rdt; if(bubbleT<=0||!show) bub.classList.remove("show"); }
+
+    renderer.render(scene,camera);
+  }
+
+  /* ---------- Điều khiển ---------- */
+  const cv=renderer.domElement;
+  const SENS=.0022;
+  document.addEventListener("pointerlockchange",()=>{
+    locked=document.pointerLockElement===cv;
+    if(!locked && state==="play" && !fallback){ paused=true; firing=false; $("#pause").classList.remove("hide"); }
+  });
+  document.addEventListener("pointerlockerror",()=>{ fallback=true; });
+  function lock(){
+    if(TOUCH) return;
+    try{ const r=cv.requestPointerLock(); if(r&&r.catch) r.catch(()=>{ fallback=true; }); }catch(e){ fallback=true; }
+  }
+  document.addEventListener("mousemove",e=>{
+    if(state!=="play"||paused) return;
+    if(locked){ yaw-=e.movementX*SENS; pitch-=e.movementY*SENS; }
+  });
+  let drag=null;
+  cv.addEventListener("pointerdown",e=>{
+    if(state!=="play"||paused) return;
+    if(e.pointerType==="touch"){ if(!drag){ drag={id:e.pointerId,x:e.clientX,y:e.clientY}; } return; }
+    if(e.button!==0) return;
+    if(!locked && !fallback){ lock(); return; }
+    firing=true;
+    if(fallback) drag={id:e.pointerId,x:e.clientX,y:e.clientY};
+  });
+  addEventListener("pointermove",e=>{
+    if(!drag||e.pointerId!==drag.id||state!=="play") return;
+    const k=e.pointerType==="touch"?.0045:.003;
+    yaw-=(e.clientX-drag.x)*k; pitch-=(e.clientY-drag.y)*k; drag.x=e.clientX; drag.y=e.clientY;
+  });
+  const up=e=>{ if(drag&&e.pointerId===drag.id) drag=null; if(e.pointerType!=="touch") firing=false; };
+  addEventListener("pointerup",up); addEventListener("pointercancel",up);
+  addEventListener("keydown",e=>{ keys[e.code]=true; if(e.code==="KeyR") reload(); });
+  addEventListener("keyup",e=>{ keys[e.code]=false; });
+  addEventListener("blur",()=>{ firing=false; Object.keys(keys).forEach(k=>keys[k]=false); });
+
+  const fireBtn=$("#fireBtn");
+  fireBtn.addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); firing=true; fireBtn.classList.add("down"); ac(); });
+  const fireUp=e=>{ firing=false; fireBtn.classList.remove("down"); };
+  fireBtn.addEventListener("pointerup",fireUp); fireBtn.addEventListener("pointercancel",fireUp); fireBtn.addEventListener("pointerleave",fireUp);
+  $("#reloadBtn").addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); reload(); });
+
+  function start(){
+    clearInterval(cdTimer);
+    ["start","pause","win"].forEach(id=>$("#"+id).classList.add("hide"));
+    reset(); state="play"; paused=false; startTime=performance.now();
+    document.body.classList.add("playing");
+    ac(); playMusic(); lock();
+    announce("BẮN HẠ ĐỘI TRƯỞNG","NHẮM VÀO ĐẦU ĐỂ HEADSHOT");
+    setTimeout(()=>say("Tốt rồi, vào đi em! 😎"),900);
+  }
+  $("#playBtn").addEventListener("click",start);
+  $("#againBtn").addEventListener("click",start);
+  $("#resumeBtn").addEventListener("click",()=>{ $("#pause").classList.add("hide"); paused=false; lock(); });
+
+  /* ---------- Tải ảnh + chạy ---------- */
+  (async()=>{
+    await document.fonts.ready.catch(()=>{});
+    const cut=await loadImg("images/dau.png");
+    const img=cut||await loadImg("images/avatar.jpg");
+    buildTam(img,!!cut);
+    $("#startFace").style.backgroundImage=`url(${headCanvas(img,!!cut).toDataURL()})`;
+    reset(); state="demo";
+    // cảnh nền phía sau màn hình bắt đầu: camera nhìn thẳng anh Tam
+    camera.position.set(0,1.9,-3); yaw=0; pitch=.02;
+    const b=$("#playBtn"); b.disabled=false; b.textContent="VÀO TRẬN";
+    tick();
+  })();
+</script>
+</body>
+</html>
