@@ -84,6 +84,7 @@
   .dmg{position:fixed;z-index:17;pointer-events:none;translate:-50% -50%;font:italic 700 26px var(--head);color:#fff;
     text-shadow:0 2px 0 #000;animation:dmg .9s ease-out forwards}
   .dmg.head{color:var(--red);font-size:36px}
+  .dmg.miss{color:#9ae6ff;font-size:24px}
   @keyframes dmg{0%{transform:scale(.4);opacity:0}15%{transform:scale(1.2);opacity:1}100%{transform:translateY(-70px);opacity:0}}
 
   .announce{position:fixed;left:50%;top:30%;z-index:30;pointer-events:none;text-align:center;opacity:0;translate:-50% -50%;width:94vw}
@@ -217,8 +218,10 @@
   const HURT=["Á! Anh chơi thật à","Tốt rồi… hơi đau","Được đấy anh Tam!","Ơ, trúng thật à?"];
   const HEAD_LINES=["Headshot em luôn à anh?!","Ối cái đầu của em!","Aim anh Tam đỉnh thật!"];
   const RAGE_LINE="Em nghiêm túc đây anh Tam! 😤";
-  const DEATH_LINE="GG anh Tam… Tốt rồi 🥲";
+  const DEATH_LINE="Con chó này";
+  const DODGE_LINES=["Hụt rồi anh Tam 😏","Né dễ ợt","Trượt!","Anh bắn vào đâu thế?","Chậm quá anh ơi"];
   const MAX_HP=100, BODY_DMG=12, HEAD_DMG=34, MAG=30;
+  const HIT_RATE=.36;   // tỉ lệ trúng trên số phát nhắm đúng người, còn lại AnhNT né
   /* ===================================================== */
 
   const $=s=>document.querySelector(s);
@@ -254,6 +257,9 @@
       o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+.02); }); },
     hit(){ this.tone([1900],.05,"square",.06); },
     head(){ this.tone([1320,1980],.1,"triangle",.28); },
+    whoosh(){ const a=ac(); if(!a) return; const t=a.currentTime; const n=a.createBufferSource(); n.buffer=NOISE;
+      const f=a.createBiquadFilter(); f.type="bandpass"; f.frequency.setValueAtTime(900,t); f.frequency.exponentialRampToValueAtTime(3000,t+.18);
+      const g=a.createGain(); env(g,t,.18,.2); n.connect(f).connect(g).connect(a.destination); n.start(t); n.stop(t+.22); },
     reload(){ this.tone([420,620],.05,"square",.05); },
     kill(){ const a=ac(); if(!a) return; const t=a.currentTime;
       const o=a.createOscillator(); o.frequency.setValueAtTime(90,t); o.frequency.exponentialRampToValueAtTime(28,t+.7);
@@ -433,9 +439,9 @@
     const tex=new THREE.CanvasTexture(headCanvas(headImg,cutout)); tex.colorSpace=THREE.SRGBColorSpace;
     headMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:tex,transparent:true,alphaTest:.05,side:THREE.DoubleSide}));
     headMesh.position.y=2.75; headMesh.castShadow=true; target.add(headMesh);
-    headHit=new THREE.Mesh(new THREE.SphereGeometry(.5,12,8),new THREE.MeshBasicMaterial({visible:false}));
+    headHit=new THREE.Mesh(new THREE.SphereGeometry(.48,12,8),new THREE.MeshBasicMaterial({visible:false}));
     headHit.position.y=2.75; target.add(headHit);
-    bodyHit=new THREE.Mesh(new THREE.BoxGeometry(1.5,2.2,.7),new THREE.MeshBasicMaterial({visible:false}));
+    bodyHit=new THREE.Mesh(new THREE.BoxGeometry(1.3,2.2,.65),new THREE.MeshBasicMaterial({visible:false}));
     bodyHit.position.y=1.1; target.add(bodyHit);
   }
 
@@ -505,21 +511,25 @@
   }
   let bubbleT=0;
   function say(t,dur=2.2){ const b=$("#bubble"); b.textContent=t; b.classList.add("show"); bubbleT=dur; }
-  function dmgNumber(p,n,head){
+  function dmgNumber(p,n,head,miss){
     const s=toScreen(p); if(s.behind) return;
-    const el=document.createElement("div"); el.className="dmg"+(head?" head":""); el.textContent=head?`${n} 💥`:n;
+    const el=document.createElement("div"); el.className="dmg"+(head?" head":"")+(miss?" miss":""); el.textContent=head?`${n} 💥`:n;
     el.style.left=s.x+rand(-20,20)+"px"; el.style.top=s.y+"px"; document.body.appendChild(el); setTimeout(()=>el.remove(),900);
   }
   function hitmarker(head){ const h=$("#hitmarker"); h.className="hitmarker"; void h.offsetWidth; h.className="hitmarker go"+(head?" head":""); }
 
   /* ---------- Trạng thái ---------- */
   let state="loading", paused=false, locked=false, fallback=TOUCH;
+  let goalX=0, dodgeT=0, aimed=0, hitCredit=0;
+  const pose={duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0};
   let hp, raged, shots, hits, heads, ammo, reloadT, fireCd, startTime, tt, tauntT, flinch, vy, killT, deathDir;
   let yaw=0, pitch=-.05, recoil=0, gunKick=0, spread=0, firing=false, timeScale=1;
   const keys={};
 
   function reset(){
-    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0;
+    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0; goalX=0; dodgeT=.6; aimed=0; hitCredit=Math.random()*.3;
+    Object.assign(pose,{duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0}); body.scale.set(1,1,1); body.position.set(0,0,0);
+    headHit.position.set(0,2.75,0); bodyHit.position.set(0,1.1,0); bodyHit.rotation.set(0,0,0); bodyHit.scale.set(1,1,1);
     yaw=0; pitch=-.05; timeScale=1; camera.position.copy(SPAWN);
     target.position.set(0,.3,TARGET_Z); target.rotation.set(0,0,0); body.rotation.set(0,0,0);
     headMesh.position.set(0,2.75,0); headMesh.rotation.set(0,0,0); headMesh.scale.setScalar(1);
@@ -545,14 +555,29 @@
       if(th && (!envHit || th.distance<envHit.distance)) tHit={point:th.point,head:th.object===headHit};
       else if(TOUCH){ // ngắm hỗ trợ trên điện thoại
         headHit.getWorldPosition(headW);
-        if(ray.ray.distanceToPoint(headW)<1.1 && (!envHit||envHit.distance>camera.position.distanceTo(headW))){
+        if(ray.ray.distanceToPoint(headW)<.75 && (!envHit||envHit.distance>camera.position.distanceTo(headW))){
           ray.ray.closestPointToPoint(headW,tmpV); tHit={point:tmpV.clone(),head:false}; }
       }
     }
-    if(tHit){ end=tHit.point; hitTarget(tHit.point,tHit.head); }
+    if(tHit){
+      aimed++; hitCredit+=HIT_RATE;
+      if(hitCredit>=1){ hitCredit-=1; end=tHit.point; hitTarget(tHit.point,tHit.head); }
+      else { dodgeShot(tHit); end=ray.ray.at(camera.position.distanceTo(tHit.point)+40,new THREE.Vector3()); }
+    }
     else if(envHit){ end=envHit.point; sparks(envHit.point,6,[0xd6c3a0,0x8a7a60,0xffe0a0],3); }
     tracer(muzzleW,end);
     if(ammo<=0) setTimeout(reload,150);
+  }
+  // AnhNT né theo chỗ bị nhắm: đầu -> thụt xuống, chân -> nhảy, giữa người -> uốn sang bên
+  function dodgeShot(t){
+    const local=target.worldToLocal(t.point.clone());
+    const grounded=target.position.y<=.31;
+    if(t.head){ pose.duckGoal=1; pose.leanGoal=0; }
+    else if(local.y<1.05 && grounded){ vy=rand(8.5,10); }
+    else { pose.leanGoal=local.x>0?1:-1; pose.duckGoal=0; }
+    pose.hold=rand(.28,.42);
+    dmgNumber(t.point,"NÉ!",false,true); SFX.whoosh();
+    if(Math.random()<.22) say(pick(DODGE_LINES),1.3);
   }
   function hitTarget(p,head){
     hits++; if(head) heads++;
@@ -567,7 +592,7 @@
   }
   function kill(head){
     state="kill"; killT=0; firing=false; SFX.kill(); updateHUD();
-    announce(head?"HEADSHOT!":"HẠ GỤC!","TAMNC ĐÃ HẠ GỤC ANHNT",head?"red":"");
+    announce("CON CHÓ NÀY!",head?"HEADSHOT · TAMNC ĐÃ HẠ GỤC ANHNT":"TAMNC ĐÃ HẠ GỤC ANHNT","red");
     say(DEATH_LINE,3); document.body.classList.add("killcam");
     deathDir=Math.sign(target.position.x-camera.position.x)||1;
     confetti(new THREE.Vector3(target.position.x,2.8,TARGET_Z),160);
@@ -634,19 +659,33 @@
     // AnhNT
     if(state==="play"||state==="demo"){
       tt+=dt*(raged?1.9:1);
-      const tx=Math.sin(tt*.9)*2.6+(raged?Math.sin(tt*2.7)*.9:0);
+      // lắt léo: đổi hướng ngẫu nhiên liên tục, nhảy lên bất chợt
+      const grounded=target.position.y<=.3;
+      dodgeT-=dt;
+      if(dodgeT<=0){
+        const x0=target.position.x;
+        do{ goalX=rand(-3.8,3.8); }while(Math.abs(goalX-x0)<1.6);
+        dodgeT=rand(.22,.6)/(raged?1.6:1);
+        if(state==="play" && grounded && Math.random()<(raged?.6:.4)) vy=rand(6,9.5);
+      }
+      const tx=goalX+Math.sin(tt*7)*.25;
       const vx=(tx-target.position.x);
-      target.position.x+=vx*Math.min(1,dt*6);
-      if(raged && target.position.y<=.3 && Math.random()<dt*.5) vy=5.5;
-      vy-=16*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
+      target.position.x+=vx*Math.min(1,dt*(raged?11:8));
+      vy-=22*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
       const stride=Math.sin(tt*9)*clamp(Math.abs(vx)*.5,0,.7);
       legs[0].rotation.x=stride; legs[1].rotation.x=-stride;
       arms[0].rotation.x=-stride*.8+Math.sin(now*2)*.05; arms[1].rotation.x=stride*.8-Math.sin(now*2)*.05;
       if(state==="play"){ tauntT-=dt; if(tauntT<=0){ say(pick(TAUNTS)); tauntT=rand(4,6.5); } }
       flinch=Math.max(0,flinch-dt*3);
-      body.rotation.z=Math.sin(now*50)*.06*flinch; body.rotation.x=-.15*flinch;
+      pose.hold-=dt; if(pose.hold<=0){ pose.duckGoal=0; pose.leanGoal=0; }
+      pose.duck+=(pose.duckGoal-pose.duck)*Math.min(1,dt*24);
+      pose.lean+=(pose.leanGoal-pose.lean)*Math.min(1,dt*24);
+      const ang=pose.lean*.55, sy=1-.38*pose.duck, hy=2.75*sy;
+      body.scale.y=sy; body.rotation.z=ang+Math.sin(now*50)*.06*flinch; body.rotation.x=-.15*flinch;
       headMesh.scale.setScalar(1+.25*flinch+Math.sin(now*3)*.02);
-      headMesh.position.y=2.75+Math.sin(now*4)*.03;
+      headMesh.position.set(-Math.sin(ang)*hy, Math.cos(ang)*hy+Math.sin(now*4)*.03, 0);
+      headHit.position.set(-Math.sin(ang)*hy, Math.cos(ang)*hy, 0);
+      bodyHit.scale.y=sy; bodyHit.rotation.z=ang; bodyHit.position.set(-Math.sin(ang)*1.1*sy, Math.cos(ang)*1.1*sy, 0);
       target.rotation.y=Math.atan2(camera.position.x-target.position.x,camera.position.z-target.position.z)*.6;
       headMesh.lookAt(camera.position);
     } else if(state==="kill"||state==="won"){
