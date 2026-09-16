@@ -227,7 +227,7 @@
   const DEATH_LINE="GG anh Tam… 🥲";      // AnhNT nói khi bị hạ
   const SHOOTER_KILL_LINE="Con chó này";  // TamNC (người bắn) nói khi hạ gục AnhNT
   const DODGE_LINES=["Hụt rồi anh Tam 😏","Né dễ ợt","Trượt!","Anh bắn vào đâu thế?","Chậm quá anh ơi"];
-  const MAX_HP=100, BODY_DMG=12, HEAD_DMG=34, MAG=30;
+  const MAX_HP=270, BODY_DMG=10, HEAD_DMG=28, MAG=20, RELOAD_TIME=2.2;  // 27 phát trúng thân mới hạ (= 75 phát ở tỉ lệ 36%)
   const FLY_LINES=["Ơ… sao người em tự bay vào đạn?!","Bắn hụt cũng không thoát được đâu 😭","Em bị hút vào đạn anh ơi!"];
   const HIT_RATE=.36;   // BẮT BUỘC: tỉ lệ trúng trên TỔNG số phát bắn.
                         // Bắn hụt nhiều -> AnhNT tự bay vào đường đạn; bắn trúng nhiều -> AnhNT né liên tục cho tới khi về 36%.
@@ -534,14 +534,14 @@
 
   /* ---------- Trạng thái ---------- */
   let state="loading", paused=false, locked=false, fallback=TOUCH;
-  let goalX=0, dodgeT=0, fly=0;
+  let goalX=0, goalZ=0, dodgeT=0, fly=0;
   const pose={duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0};
   let hp, raged, shots, hits, heads, ammo, reloadT, fireCd, startTime, tt, tauntT, flinch, vy, killT, deathDir;
   let yaw=0, pitch=-.05, recoil=0, gunKick=0, spread=0, firing=false, timeScale=1;
   const keys={};
 
   function reset(){
-    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0; goalX=0; dodgeT=.6; fly=0;
+    hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0; goalX=0; goalZ=TARGET_Z; dodgeT=.6; fly=0;
     Object.assign(pose,{duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0}); body.scale.set(1,1,1); body.position.set(0,0,0);
     headHit.position.set(0,2.75,0); bodyHit.position.set(0,1.1,0); bodyHit.rotation.set(0,0,0); bodyHit.scale.set(1,1,1);
     yaw=0; pitch=-.05; timeScale=1; camera.position.copy(SPAWN);
@@ -553,7 +553,7 @@
 
   /* ---------- Bắn ---------- */
   const ray=new THREE.Raycaster(), NDC=new THREE.Vector2(), tmpV=new THREE.Vector3(), headW=new THREE.Vector3();
-  function reload(){ if(reloadT>0||ammo===MAG||state!=="play") return; reloadT=1.25; SFX.reload(); $("#ammo").classList.add("reloading"); }
+  function reload(){ if(reloadT>0||ammo===MAG||state!=="play") return; reloadT=RELOAD_TIME; SFX.reload(); $("#ammo").classList.add("reloading"); }
   function fire(){
     if(ammo<=0){ reload(); return; }
     ammo--; shots++; fireCd=.1; SFX.shot(); updateHUD();
@@ -588,7 +588,7 @@
     const p = r.direction.z<-.05 ? r.at((TARGET_Z-r.origin.z)/r.direction.z,new THREE.Vector3()) : r.at(14,new THREE.Vector3());
     target.position.set(clamp(p.x,-16,16), clamp(p.y-1.5,.3,9), clamp(p.z,-40,16));
     Object.assign(pose,{duck:0,lean:0,duckGoal:0,leanGoal:0,hold:0});
-    fly=.6; vy=0; goalX=clamp(target.position.x,-3.8,3.8);
+    fly=.6; vy=0; goalX=clamp(target.position.x,-5.2,5.2);
     const center=target.position.clone().add(new THREE.Vector3(0,1.5,0));
     for(let i=0;i<=10;i++) sparks(from.clone().lerp(center,i/10),3,[0x9ae6ff,0xffffff,0x0ac8b9],1.5,2);
     SFX.whoosh(); say(pick(FLY_LINES),1.8);
@@ -613,7 +613,7 @@
     if(hp<=0){ kill(head); return; }
     if(head){ announce("HEADSHOT!","","red"); say(pick(HEAD_LINES)); }
     else if(Math.random()<.3) say(pick(HURT),1.4);
-    if(!raged && hp<=50){ raged=true; say(RAGE_LINE); announce("ANHNT NỔI GIẬN","ANHNT NÉ NHANH HƠN RỒI","red"); }
+    if(!raged && hp<=MAX_HP/2){ raged=true; say(RAGE_LINE); announce("ANHNT NỔI GIẬN","ANHNT NÉ NHANH HƠN RỒI","red"); }
     updateHUD();
   }
   function kill(head){
@@ -679,7 +679,7 @@
 
     // súng: giật + lắc + nạp đạn
     gunKick*=Math.pow(.0008,rdt);
-    const reloadDip=reloadT>0?Math.sin((1-reloadT/1.25)*Math.PI):0;
+    const reloadDip=reloadT>0?Math.sin((1-reloadT/RELOAD_TIME)*Math.PI):0;
     gun.position.set(GUN_BASE.x+Math.sin(now*1.6)*.004, GUN_BASE.y+Math.cos(now*3.2)*.004-reloadDip*.18, GUN_BASE.z+gunKick*.07);
     gun.rotation.set(gunKick*.12+reloadDip*.6, 0, reloadDip*.4);
 
@@ -691,16 +691,17 @@
       dodgeT-=dt;
       if(dodgeT<=0){
         const x0=target.position.x;
-        do{ goalX=rand(-3.8,3.8); }while(Math.abs(goalX-x0)<1.6);
-        dodgeT=rand(.22,.6)/(raged?1.6:1);
-        if(state==="play" && grounded && Math.random()<(raged?.6:.4)) vy=rand(6,9.5);
+        do{ goalX=rand(-5.2,5.2); }while(Math.abs(goalX-x0)<2.2);
+        goalZ=TARGET_Z+rand(-3,3);
+        dodgeT=rand(.14,.42)/(raged?1.7:1);
+        if(state==="play" && grounded && Math.random()<(raged?.7:.5)) vy=rand(6.5,10);
       }
       const tx=goalX+Math.sin(tt*7)*.25;
       const vx=(tx-target.position.x);
       if(fly>0) fly-=dt;   // đang lơ lửng sau khi tự bay vào đạn
       else {
-        target.position.x+=vx*Math.min(1,dt*(raged?11:8));
-        target.position.z+=(TARGET_Z-target.position.z)*Math.min(1,dt*5);
+        target.position.x+=vx*Math.min(1,dt*(raged?14:10));
+        target.position.z+=(goalZ-target.position.z)*Math.min(1,dt*6);
         vy-=22*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
       }
       const stride=Math.sin(tt*9)*clamp(Math.abs(vx)*.5,0,.7);
