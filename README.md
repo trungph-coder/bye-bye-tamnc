@@ -4,7 +4,7 @@ Thiệp chia tay anh **Nguyễn Chí Tam**, dựa trên template [anhnt-24/bye-b
 
 - **🌻 Nắng** (`index.html`) — phong bì, lá thư giấy kẻ, tông vàng cam.
 - **🎮 Game** (`play.html` → `game.html`) — LMHT × PUBG:
-  - `play.html`: game bắn súng góc nhìn thứ nhất (3D, Three.js). Anh Tam đứng giữa đấu trường, thân 3D, **đầu là ảnh**; né qua lại, cà khịa, nổi giận khi còn nửa máu. Bắn hạ xong tự sang hậu trận.
+  - `play.html`: **Giúp TamNC bắn hạ AnhNT** — game bắn súng góc nhìn thứ nhất (3D, Three.js). AnhNT đứng giữa đấu trường, thân 3D, **đầu là ảnh**; né qua lại, cà khịa anh Tam, nổi giận khi còn nửa máu. Bắn hạ xong tự sang hậu trận.
   - `game.html`: hậu trận — thẻ MVP, tổng kết trận (lấy số liệu trận vừa bắn), highlight, Honor, kênh chat, nút "Tốt rồi", thành tựu, kill feed.
 
 ## Thả ảnh vào `images/`
@@ -15,7 +15,7 @@ Thiệp chia tay anh **Nguyễn Chí Tam**, dựa trên template [anhnt-24/bye-b
 | 4 ảnh trong thư (Nắng) / ảnh chụp dưới kênh chat (Game) | `thu-1.jpg` … `thu-4.jpg` |
 | 2 sticker hai bên (PNG nền trong, màn ≥900px) — chỉ bản Nắng | `sticker-trai.png`, `sticker-phai.png` |
 | Ảnh đại diện thẻ MVP — chỉ bản Game | `avatar.jpg` |
-| Đầu nhân vật trong game bắn (PNG đã tách nền; không có thì cắt tròn `avatar.jpg`) | `dau.png` |
+| Đầu AnhNT trong game bắn (PNG đã tách nền; không có thì cắt tròn `anhnt.jpg`) | `anhnt.png` |
 
 Khung nào chưa có ảnh sẽ hiện 📷 kèm tên file cần thả. Dùng đuôi khác (`.png`, `.jpeg`) thì sửa `src` trong `index.html`.
 

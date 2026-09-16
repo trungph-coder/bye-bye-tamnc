@@ -417,7 +417,7 @@
       <div class="transfer">🔁 CHUYỂN NHƯỢNG THÀNH CÔNG</div>
       <p>Tuyển thủ <b style="color:var(--gold-hi)">TAMNC</b> rời đội để chinh phục server mới. Cảm ơn đội trưởng vì đã dẫn cả team qua bao nhiêu trận. Hẹn gặp lại ở trận tiếp theo!</p>
       <button class="replay" id="replayBtn">↻ XEM LẠI TRẬN</button>
-      <a class="replay" href="play.html">🔫 BẮN LẠI ANH TAM</a>
+      <a class="replay" href="play.html">🔫 BẮN LẠI ANHNT</a>
     </section>
   </main>
 
@@ -474,7 +474,7 @@
   if(FROM_PLAY && Q.has("hits")){
     const shots=+Q.get("shots")||0, hits=+Q.get("hits")||0, heads=+Q.get("heads")||0;
     SUMMARY.splice(0,SUMMARY.length,
-      ["#1","Hạng / 100 đội"], [hits,"Phát trúng TAMNC"], [heads,"Headshot"],
+      ["#1","Hạng / 100 đội"], [hits,"Phát trúng AnhNT"], [heads,"Headshot"],
       [(shots?Math.round(hits/shots*100):0)+"%","Độ chính xác"]);
   }
 

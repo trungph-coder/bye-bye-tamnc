@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>TAMNC: Bắn Hạ Đội Trưởng 🔫</title>
+<title>Giúp TamNC bắn hạ AnhNT 🔫</title>
 
 <!--
   ============== GAME BẮN GÓC NHÌN THỨ NHẤT ==============
-  Nhân vật anh Tam = thân dựng 3D + ĐẦU LÀ ẢNH:
-    - images/dau.png    : ảnh đầu đã tách nền (PNG trong suốt) — đẹp nhất
-    - images/avatar.jpg : nếu chưa có dau.png thì cắt tròn ảnh này làm đầu
+  Người chơi vào vai TamNC. Mục tiêu là AnhNT = thân dựng 3D + ĐẦU LÀ ẢNH:
+    - images/anhnt.png : ảnh đầu AnhNT đã tách nền (PNG trong suốt) — đẹp nhất
+    - images/anhnt.jpg : nếu chưa có anhnt.png thì cắt tròn ảnh này làm đầu
   Không có ảnh nào thì game tự vẽ một khuôn mặt thay thế.
   Nhạc: music-game.mp3, không có thì music.mp3.
   Bắn hạ xong tự chuyển sang game.html (hậu trận).
-  Câu thoại của anh Tam: khối "✏️ NỘI DUNG" đầu <script>.
+  Câu thoại của AnhNT: khối "✏️ NỘI DUNG" đầu <script>.
   =========================================================
 -->
 
@@ -159,14 +159,14 @@
 
   <div class="hud">
     <div class="boss">
-      <div class="nm">👑 ĐỘI TRƯỞNG TAMNC</div>
+      <div class="nm">🎯 MỤC TIÊU: ANHNT</div>
       <div class="bar"><b id="bossLag"></b><i id="bossHp"></i><span class="hpn" id="bossNum">100</span></div>
     </div>
     <div class="crosshair" id="cross"><i></i><i></i><i></i><i></i></div>
     <div class="hitmarker" id="hitmarker"><i></i><i></i><i></i><i></i></div>
     <div class="ammo" id="ammo"><small>M416</small><b id="ammoN">30<span> / ∞</span></b><div class="rl">ĐANG NẠP ĐẠN…</div></div>
-    <div class="shotstats">🎯 Trúng <b id="stHit">0</b> &nbsp;·&nbsp; 💀 Headshot <b id="stHead">0</b></div>
-    <div class="tag" id="tag">TAMNC</div>
+    <div class="shotstats">🔫 <b>TAMNC</b> &nbsp;·&nbsp; 🎯 Trúng <b id="stHit">0</b> &nbsp;·&nbsp; 💀 Headshot <b id="stHead">0</b></div>
+    <div class="tag" id="tag">ANHNT</div>
     <div class="bubble" id="bubble"></div>
     <button class="fire" id="fireBtn">BẮN</button>
     <button class="reload-btn" id="reloadBtn" aria-label="Nạp đạn">🔄</button>
@@ -176,9 +176,9 @@
   <div class="screen" id="start">
     <div class="eyebrow">LMHT × PUBG · GÓC NHÌN THỨ NHẤT</div>
     <div class="face" id="startFace"></div>
-    <h1 class="title">TAMNC</h1>
-    <div class="subtitle">BẮN HẠ ĐỘI TRƯỞNG</div>
-    <p class="lead">Anh Tam đang đứng giữa đấu trường, né qua né lại và cà khịa cả team. Bắn hạ anh ấy để mở khóa <b style="color:var(--gold-hi)">trang hậu trận</b>. Nhắm vào đầu để <b style="color:var(--red)">HEADSHOT</b>!</p>
+    <div class="subtitle">GIÚP TAMNC</div>
+    <h1 class="title" style="font-size:clamp(46px,10vw,112px)">BẮN HẠ ANHNT</h1>
+    <p class="lead"><b style="color:var(--gold-hi)">AnhNT</b> đang đứng giữa đấu trường, né qua né lại và cà khịa anh Tam. Cầm súng giúp <b style="color:var(--pubg)">TamNC</b> bắn hạ AnhNT để mở khóa <b style="color:var(--gold-hi)">trang hậu trận</b>. Nhắm vào đầu để <b style="color:var(--red)">HEADSHOT</b>!</p>
     <div class="howto desk-only">
       <span><kbd>Chuột</kbd> ngắm</span><span><kbd>Click</kbd> giữ để bắn</span><span><kbd>R</kbd> nạp đạn</span><span><kbd>W A S D</kbd> di chuyển</span><span><kbd>Esc</kbd> tạm dừng</span>
     </div>
@@ -193,7 +193,7 @@
   </div>
 
   <div class="screen hide" id="win">
-    <div class="eyebrow">ĐÃ HẠ GỤC ĐỘI TRƯỞNG TAMNC</div>
+    <div class="eyebrow">TAMNC ĐÃ HẠ GỤC ANHNT</div>
     <h1 class="title" style="font-size:clamp(50px,11vw,120px)">CHIẾN THẮNG</h1>
     <div class="chicken">WINNER WINNER CHICKEN DINNER 🍗</div>
     <div class="stats">
@@ -213,11 +213,11 @@
   import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js";
 
   /* ==================== ✏️ NỘI DUNG ==================== */
-  const TAUNTS=["Tốt rồi! 😎","Bắn trúng anh đi em","Rank gì mà run tay thế?","Deadline anh còn né được","GG chưa em?","Tốt rồi, bắn tiếp đi!","Aim kiểu này sao leo rank 😏"];
-  const HURT=["Á!","Tốt rồi… hơi đau","Được đấy!","Ơ, trúng thật à?"];
-  const HEAD_LINES=["Headshot à?! Tốt rồi…","Ối cái đầu của anh!","Aim ngon đấy em!"];
-  const RAGE_LINE="Nghiêm túc đây! 😤";
-  const DEATH_LINE="GG… Tốt rồi 🥲";
+  const TAUNTS=["Anh Tam bắn trúng em đi 😎","Thách Đấu mà run tay à anh?","Em né deadline còn giỏi hơn","Anh Tam ơi, tốt rồi chưa?","Nghỉ rồi còn bắn nổi không anh 😏","GG chưa anh Tam?","Aim kiểu này sao leo rank anh ơi"];
+  const HURT=["Á! Anh chơi thật à","Tốt rồi… hơi đau","Được đấy anh Tam!","Ơ, trúng thật à?"];
+  const HEAD_LINES=["Headshot em luôn à anh?!","Ối cái đầu của em!","Aim anh Tam đỉnh thật!"];
+  const RAGE_LINE="Em nghiêm túc đây anh Tam! 😤";
+  const DEATH_LINE="GG anh Tam… Tốt rồi 🥲";
   const MAX_HP=100, BODY_DMG=12, HEAD_DMG=34, MAG=30;
   /* ===================================================== */
 
@@ -380,7 +380,7 @@
   drop.add(chute,dbox); scene.add(drop);
   let dropT=0;
 
-  /* ---------- Anh Tam: thân 3D + đầu là ảnh ---------- */
+  /* ---------- AnhNT: thân 3D + đầu là ảnh ---------- */
   const loadImg=src=>new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=()=>r(null); i.src=src; });
   function headCanvas(img,cutout){
     const c=document.createElement("canvas"); c.width=c.height=512; const g=c.getContext("2d");
@@ -393,25 +393,25 @@
       g.fillStyle="#2a1a0a"; g.beginPath(); g.ellipse(256,70,230,110,0,0,Math.PI*2); g.fill();
       g.fillStyle="#1a1a1a"; g.beginPath(); g.arc(180,250,22,0,7); g.arc(332,250,22,0,7); g.fill();
       g.strokeStyle="#1a1a1a"; g.lineWidth=14; g.lineCap="round"; g.beginPath(); g.arc(256,300,90,.2*Math.PI,.8*Math.PI); g.stroke();
-      g.fillStyle="rgba(0,0,0,.55)"; g.font='700 44px "Chakra Petch",sans-serif'; g.textAlign="center"; g.fillText("images/dau.png",256,460);
+      g.fillStyle="rgba(0,0,0,.55)"; g.font='700 44px "Chakra Petch",sans-serif'; g.textAlign="center"; g.fillText("images/anhnt.png",256,460);
     }
     g.restore();
     g.lineWidth=18; g.strokeStyle="#c8aa6e"; g.beginPath(); g.arc(256,256,238,0,Math.PI*2); g.stroke();
     return c;
   }
 
-  const tam=new THREE.Group(); tam.position.set(0,.3,TARGET_Z); scene.add(tam);
-  const body=new THREE.Group(); tam.add(body);
+  const target=new THREE.Group(); target.position.set(0,.3,TARGET_Z); scene.add(target);
+  const body=new THREE.Group(); target.add(body);
   const skin=std(0xe0ac7e), navy=std(0x16213e), dark=std(0x111827), goldM=std(0xc8aa6e,{metalness:.6,roughness:.4});
   const shadowAll=o=>o.traverse(m=>{ if(m.isMesh){ m.castShadow=true; m.receiveShadow=true; } });
   let headMesh=null, headHit=null, bodyHit=null;
   const legs=[], arms=[];
 
-  function buildTam(headImg,cutout){
+  function buildTarget(headImg,cutout){
     const jersey=canvasTex(256,256,(g,w,h)=>{
       g.fillStyle="#16213e"; g.fillRect(0,0,w,h); g.fillStyle="#c8aa6e"; g.fillRect(0,0,w,22); g.fillRect(0,h-16,w,16);
-      g.fillStyle="#f2a900"; g.textAlign="center"; g.font='700 120px "Chakra Petch",sans-serif'; g.fillText("99",w/2,160);
-      g.fillStyle="#f0e6d2"; g.font='700 40px "Chakra Petch",sans-serif'; g.fillText("TAMNC",w/2,222); });
+      g.fillStyle="#f2a900"; g.textAlign="center"; g.font='700 120px "Chakra Petch",sans-serif'; g.fillText("24",w/2,160);
+      g.fillStyle="#f0e6d2"; g.font='700 40px "Chakra Petch",sans-serif'; g.fillText("ANHNT",w/2,222); });
     const torso=new THREE.Mesh(new THREE.BoxGeometry(1,.95,.5),[navy,navy,navy,navy,std(0xffffff,{map:jersey}),navy]);
     torso.position.y=1.55;
     const hips=new THREE.Mesh(new THREE.BoxGeometry(.95,.3,.48),dark); hips.position.y=.98;
@@ -432,11 +432,11 @@
 
     const tex=new THREE.CanvasTexture(headCanvas(headImg,cutout)); tex.colorSpace=THREE.SRGBColorSpace;
     headMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:tex,transparent:true,alphaTest:.05,side:THREE.DoubleSide}));
-    headMesh.position.y=2.75; headMesh.castShadow=true; tam.add(headMesh);
+    headMesh.position.y=2.75; headMesh.castShadow=true; target.add(headMesh);
     headHit=new THREE.Mesh(new THREE.SphereGeometry(.5,12,8),new THREE.MeshBasicMaterial({visible:false}));
-    headHit.position.y=2.75; tam.add(headHit);
+    headHit.position.y=2.75; target.add(headHit);
     bodyHit=new THREE.Mesh(new THREE.BoxGeometry(1.5,2.2,.7),new THREE.MeshBasicMaterial({visible:false}));
-    bodyHit.position.y=1.1; tam.add(bodyHit);
+    bodyHit.position.y=1.1; target.add(bodyHit);
   }
 
   /* ---------- Súng góc nhìn thứ nhất ---------- */
@@ -521,7 +521,7 @@
   function reset(){
     hp=MAX_HP; raged=false; shots=hits=heads=0; ammo=MAG; reloadT=0; fireCd=0; tt=0; tauntT=2.5; flinch=0; vy=0; killT=0;
     yaw=0; pitch=-.05; timeScale=1; camera.position.copy(SPAWN);
-    tam.position.set(0,.3,TARGET_Z); tam.rotation.set(0,0,0); body.rotation.set(0,0,0);
+    target.position.set(0,.3,TARGET_Z); target.rotation.set(0,0,0); body.rotation.set(0,0,0);
     headMesh.position.set(0,2.75,0); headMesh.rotation.set(0,0,0); headMesh.scale.setScalar(1);
     document.body.classList.remove("killcam");
     updateHUD();
@@ -549,12 +549,12 @@
           ray.ray.closestPointToPoint(headW,tmpV); tHit={point:tmpV.clone(),head:false}; }
       }
     }
-    if(tHit){ end=tHit.point; hitTam(tHit.point,tHit.head); }
+    if(tHit){ end=tHit.point; hitTarget(tHit.point,tHit.head); }
     else if(envHit){ end=envHit.point; sparks(envHit.point,6,[0xd6c3a0,0x8a7a60,0xffe0a0],3); }
     tracer(muzzleW,end);
     if(ammo<=0) setTimeout(reload,150);
   }
-  function hitTam(p,head){
+  function hitTarget(p,head){
     hits++; if(head) heads++;
     const dmg=head?HEAD_DMG:BODY_DMG; hp=Math.max(0,hp-dmg);
     dmgNumber(p,dmg,head); hitmarker(head); head?SFX.head():SFX.hit();
@@ -562,16 +562,16 @@
     if(hp<=0){ kill(head); return; }
     if(head){ announce("HEADSHOT!","","red"); say(pick(HEAD_LINES)); }
     else if(Math.random()<.3) say(pick(HURT),1.4);
-    if(!raged && hp<=50){ raged=true; say(RAGE_LINE); announce("ĐỘI TRƯỞNG NỔI GIẬN","ANH TAM NÉ NHANH HƠN RỒI","red"); }
+    if(!raged && hp<=50){ raged=true; say(RAGE_LINE); announce("ANHNT NỔI GIẬN","ANHNT NÉ NHANH HƠN RỒI","red"); }
     updateHUD();
   }
   function kill(head){
     state="kill"; killT=0; firing=false; SFX.kill(); updateHUD();
-    announce(head?"HEADSHOT!":"HẠ GỤC!","ĐÃ HẠ GỤC ĐỘI TRƯỞNG TAMNC",head?"red":"");
+    announce(head?"HEADSHOT!":"HẠ GỤC!","TAMNC ĐÃ HẠ GỤC ANHNT",head?"red":"");
     say(DEATH_LINE,3); document.body.classList.add("killcam");
-    deathDir=Math.sign(tam.position.x-camera.position.x)||1;
-    confetti(new THREE.Vector3(tam.position.x,2.8,TARGET_Z),160);
-    setTimeout(()=>{ announce("CHIẾN THẮNG","WINNER WINNER CHICKEN DINNER 🍗"); confetti(new THREE.Vector3(tam.position.x,3,TARGET_Z),120); },1500);
+    deathDir=Math.sign(target.position.x-camera.position.x)||1;
+    confetti(new THREE.Vector3(target.position.x,2.8,TARGET_Z),160);
+    setTimeout(()=>{ announce("CHIẾN THẮNG","WINNER WINNER CHICKEN DINNER 🍗"); confetti(new THREE.Vector3(target.position.x,3,TARGET_Z),120); },1500);
     setTimeout(showWin,3300);
   }
   let cdTimer=null;
@@ -631,14 +631,14 @@
     gun.position.set(GUN_BASE.x+Math.sin(now*1.6)*.004, GUN_BASE.y+Math.cos(now*3.2)*.004-reloadDip*.18, GUN_BASE.z+gunKick*.07);
     gun.rotation.set(gunKick*.12+reloadDip*.6, 0, reloadDip*.4);
 
-    // anh Tam
+    // AnhNT
     if(state==="play"||state==="demo"){
       tt+=dt*(raged?1.9:1);
       const tx=Math.sin(tt*.9)*2.6+(raged?Math.sin(tt*2.7)*.9:0);
-      const vx=(tx-tam.position.x);
-      tam.position.x+=vx*Math.min(1,dt*6);
-      if(raged && tam.position.y<=.3 && Math.random()<dt*.5) vy=5.5;
-      vy-=16*dt; tam.position.y=Math.max(.3,tam.position.y+vy*dt); if(tam.position.y<=.3) vy=0;
+      const vx=(tx-target.position.x);
+      target.position.x+=vx*Math.min(1,dt*6);
+      if(raged && target.position.y<=.3 && Math.random()<dt*.5) vy=5.5;
+      vy-=16*dt; target.position.y=Math.max(.3,target.position.y+vy*dt); if(target.position.y<=.3) vy=0;
       const stride=Math.sin(tt*9)*clamp(Math.abs(vx)*.5,0,.7);
       legs[0].rotation.x=stride; legs[1].rotation.x=-stride;
       arms[0].rotation.x=-stride*.8+Math.sin(now*2)*.05; arms[1].rotation.x=stride*.8-Math.sin(now*2)*.05;
@@ -647,13 +647,13 @@
       body.rotation.z=Math.sin(now*50)*.06*flinch; body.rotation.x=-.15*flinch;
       headMesh.scale.setScalar(1+.25*flinch+Math.sin(now*3)*.02);
       headMesh.position.y=2.75+Math.sin(now*4)*.03;
-      tam.rotation.y=Math.atan2(camera.position.x-tam.position.x,camera.position.z-tam.position.z)*.6;
+      target.rotation.y=Math.atan2(camera.position.x-target.position.x,camera.position.z-target.position.z)*.6;
       headMesh.lookAt(camera.position);
     } else if(state==="kill"||state==="won"){
       killT+=rdt;
       timeScale = killT<1.1 ? .3 : Math.min(1,timeScale+rdt*2);
       const k=Math.min(1,killT/1.1), e=1-Math.pow(1-k,3);
-      tam.rotation.x=-e*Math.PI/2; tam.rotation.z=deathDir*e*.25;
+      target.rotation.x=-e*Math.PI/2; target.rotation.z=deathDir*e*.25;
       arms[0].rotation.z=-.12-e*1.2; arms[1].rotation.z=.12+e*1.2;
       headMesh.rotation.z+=rdt*2*(1-k);
     }
@@ -724,8 +724,8 @@
     reset(); state="play"; paused=false; startTime=performance.now();
     document.body.classList.add("playing");
     ac(); playMusic(); lock();
-    announce("BẮN HẠ ĐỘI TRƯỞNG","NHẮM VÀO ĐẦU ĐỂ HEADSHOT");
-    setTimeout(()=>say("Tốt rồi, vào đi em! 😎"),900);
+    announce("GIÚP TAMNC BẮN HẠ ANHNT","NHẮM VÀO ĐẦU ĐỂ HEADSHOT");
+    setTimeout(()=>say("Vào đi anh Tam! 😎"),900);
   }
   $("#playBtn").addEventListener("click",start);
   $("#againBtn").addEventListener("click",start);
@@ -734,12 +734,12 @@
   /* ---------- Tải ảnh + chạy ---------- */
   (async()=>{
     await document.fonts.ready.catch(()=>{});
-    const cut=await loadImg("images/dau.png");
-    const img=cut||await loadImg("images/avatar.jpg");
-    buildTam(img,!!cut);
+    const cut=await loadImg("images/anhnt.png");
+    const img=cut||await loadImg("images/anhnt.jpg");
+    buildTarget(img,!!cut);
     $("#startFace").style.backgroundImage=`url(${headCanvas(img,!!cut).toDataURL()})`;
     reset(); state="demo";
-    // cảnh nền phía sau màn hình bắt đầu: camera nhìn thẳng anh Tam
+    // cảnh nền phía sau màn hình bắt đầu: camera nhìn thẳng AnhNT
     camera.position.set(0,1.9,-3); yaw=0; pitch=.02;
     const b=$("#playBtn"); b.disabled=false; b.textContent="VÀO TRẬN";
     tick();
